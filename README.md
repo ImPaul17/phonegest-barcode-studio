@@ -10,8 +10,8 @@ Descarga los ejecutables desde [GitHub Releases](https://github.com/ImPaul17/pho
 
 | Archivo | Uso |
 | --- | --- |
-| `PhoneGest-Barcode-Studio-1.0.3-Instalador.exe` | Instala para el usuario actual, crea accesos y permite actualizar desde la aplicación. |
-| `PhoneGest-Barcode-Studio-1.0.3-Portable.exe` | Abre sin instalar. Para actualizar, descarga y ejecuta un portable nuevo. |
+| `PhoneGest-Barcode-Studio-1.0.4-Instalador.exe` | Instala para el usuario actual, crea accesos y permite actualizar desde la aplicación. |
+| `PhoneGest-Barcode-Studio-1.0.4-Portable.exe` | Abre sin instalar. Para actualizar, descarga y ejecuta un portable nuevo. |
 
 El número de versión del nombre cambia en cada publicación. Ambas variantes trabajan offline y guardan la sesión en el perfil del usuario de Windows. La edición portable también utiliza ese perfil; los datos de trabajo no viajan dentro del ejecutable.
 
@@ -21,7 +21,7 @@ Los ejecutables actuales no tienen certificado de firma digital. Windows puede i
 
 Desde la versión **1.0.2**, la aplicación instalada consulta las versiones estables de este repositorio poco después de iniciarse y cada cuatro horas mientras permanece abierta. Descarga las versiones nuevas en segundo plano y espera a que elijas **Reiniciar e instalar**. Antes de reiniciar guarda la sesión actual; cerrar normalmente la aplicación no instala una descarga pendiente.
 
-Abre **Actualizaciones** desde la cabecera o desde **Configuración** para ver la versión, el estado y el progreso, o pulsa **Buscar actualizaciones**. Si no hay conexión, puedes seguir trabajando con tus códigos. La edición portable ofrece **Abrir descargas** para conseguir una versión nueva. Las versiones 1.0.0 y 1.0.1 necesitan una primera actualización manual al instalador 1.0.2 o posterior para incorporar el sistema corregido.
+Abre el menú **Actualizaciones** desde su botón en la cabecera para ver la versión instalada, el estado y el progreso, o pulsa **Buscar actualizaciones**. Cuando hay una versión nueva aparece un aviso debajo de la cabecera; al ocultarlo, el indicador del botón permanece visible y el aviso vuelve a aparecer cuando está lista para instalar. Si no hay conexión, puedes seguir trabajando con tus códigos. La edición portable ofrece **Abrir descargas** para conseguir una versión nueva. Las versiones 1.0.0 y 1.0.1 necesitan una primera actualización manual al instalador 1.0.2 o posterior para incorporar el sistema corregido.
 
 El origen es el repositorio público `ImPaul17/phonegest-barcode-studio` y la infraestructura de archivos de GitHub. No se necesita cuenta ni token de GitHub en el equipo del usuario. GitHub recibe las solicitudes habituales de conexión y descarga, incluidos la dirección IP y los datos técnicos de HTTP; no recibe códigos, proyectos, PDF ni imágenes de trabajo.
 

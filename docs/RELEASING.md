@@ -4,7 +4,7 @@ El origen del actualizador es el repositorio público [ImPaul17/phonegest-barcod
 
 ## Preparar una versión
 
-Incrementa la versión y el lockfile juntos; revisa los avisos de terceros si cambian las dependencias distribuidas. Desde 1.0.3, por ejemplo:
+Incrementa la versión y el lockfile juntos; revisa los avisos de terceros si cambian las dependencias distribuidas. Desde 1.0.4, por ejemplo:
 
 ```powershell
 npm version patch --no-git-tag-version
@@ -20,8 +20,8 @@ npm run test:png
 Revisa y confirma los cambios, súbelos a `main` y espera al resultado de **Comprobar Windows** en Actions. Después crea una etiqueta que coincida exactamente con `package.json`:
 
 ```powershell
-git tag -a v1.0.4 -m "PhoneGest Barcode Studio 1.0.4"
-git push origin v1.0.4
+git tag -a v1.0.5 -m "PhoneGest Barcode Studio 1.0.5"
+git push origin v1.0.5
 ```
 
 El número es un ejemplo. No reutilices etiquetas ni reduzcas versiones. El flujo rechaza etiquetas sin `v`, versiones preliminares o diferencias con `package.json`.
@@ -61,6 +61,6 @@ Si el trabajo falla antes de publicar, corrige la causa y vuelve a ejecutarlo pa
 
 El flujo rechaza modificar una Release ya publicada. No cambies sus ejecutables ni `latest.yml`: los equipos pueden haber almacenado hashes o descargas. Publica la corrección con un número superior.
 
-Revisa los cuatro archivos y el resultado de Actions. Instala en un perfil de prueba y consulta **Configuración → Actualizaciones**. Validar todo el ciclo de actualización requiere publicar una versión superior; una comprobación de “ya estás actualizado” no valida por sí sola la instalación.
+Revisa los cuatro archivos y el resultado de Actions. Instala en un perfil de prueba y abre **Actualizaciones** desde la cabecera. Validar todo el ciclo de actualización requiere publicar una versión superior; una comprobación de “ya estás actualizado” no valida por sí sola la instalación.
 
 Referencias: [GitHub CLI: crear una Release](https://cli.github.com/manual/gh_release_create), [etiquetas y ejecución manual de GitHub Actions](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow).

@@ -32,3 +32,25 @@
 [data-theme=dark] .select-option[aria-selected=true]{color:var(--text)}
 [data-theme=dark] .select-option[aria-selected=true]>svg{color:var(--mint)}
 @media(max-width:1190px){.select-control-toolbar{max-width:185px;font-size:9px;padding:0 5px}}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.update-header-button{height:35px;padding:0 11px;gap:7px;font-size:10px;color:var(--text);border-color:var(--border);background:var(--panel)}
+.update-header-button:hover:not(:disabled){background:var(--hover)}
+.update-header-button.has-update{color:var(--text);background:var(--mint-soft);border-color:#7fc1a155}
+.update-header-button.has-update>svg{color:var(--green)}
+.update-banner{margin:0;padding:12px 38px;min-height:72px;border-width:0 0 1px;border-radius:0}
+.updates-modal{display:flex;flex-direction:column;overflow:hidden;width:500px}
+.updates-modal>.modal-heading,.updates-modal>.modal-footer{flex-shrink:0}
+.updates-modal>.modal-content{overflow-y:auto;overscroll-behavior:contain;min-height:0}
+.updates-modal .updates-section{padding:0;border:0}
+.update-version-summary{display:flex;gap:14px;padding-bottom:19px;margin-bottom:16px;border-bottom:1px solid var(--border)}
+.update-version-summary>div{display:flex;flex-direction:column;gap:7px;flex:1;min-width:0}
+.update-version-summary span{font-size:10px;color:var(--secondary)}
+.update-version-summary strong{font-size:17px;font-weight:600;letter-spacing:-.3px;color:var(--text);overflow-wrap:anywhere}
+.update-version-summary>div+div{padding-left:18px;border-left:1px solid var(--border)}
+.updates-modal .update-status{padding:14px}
+.updates-modal .update-status strong{font-size:11px}
+.updates-modal .updates-actions .button{height:37px}
+.updates-modal .update-help,.updates-modal .update-privacy{font-size:10px;line-height:1.7}
+.updates-modal .update-help{margin-top:16px}
+.updates-modal .update-privacy{padding-top:13px;border-top:1px solid var(--border)}
+@media(max-width:1190px){.update-banner{padding:12px 24px}.update-header-button{padding:0 9px}.header-divider{margin:0 8px}}

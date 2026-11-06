@@ -25,7 +25,7 @@ async function checkLayoutSelectors(page) {
   const report = [];
   const openSettings = async () => {
     await page.getByRole('button',{name:'Configuración',exact:true}).click();
-    await page.waitForFunction(()=>document.activeElement?.getAttribute('aria-label')==='Cerrar configuración');
+    await page.waitForFunction(()=>document.querySelector('.settings-modal')?.contains(document.activeElement));
   };
   const choose = async (control, text) => {
     await control.click();

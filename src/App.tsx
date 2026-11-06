@@ -26,6 +26,7 @@ export default function App() {
   const [notice, setNotice] = useState<{text: string; error?: boolean} | null>(null);
   const [inputError, setInputError] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [updatesOpen, setUpdatesOpen] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
   const [editing, setEditing] = useState<number | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -42,8 +43,8 @@ export default function App() {
   const previewRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const dragIndex = useRef<number | null>(null);
-  const updatesSectionRef = useRef<HTMLElement>(null);
-  const focusUpdates = useRef(false);
+  const updatesButtonRef = useRef<HTMLButtonElement>(null);
+  const updatesDialogRef = useRef<HTMLElement>(null);
   const dark = theme === 'dark' || (theme === 'system' && systemDark);
   const pageCount = Math.max(1, Math.ceil(codes.length / ROWS[settings.layout]));
   const duplicates = codes.length - new Set(codes).size;
@@ -52,11 +53,12 @@ export default function App() {
   const updates: UpdateState = updateState ?? { status: 'unsupported', currentVersion: version, canAutoUpdate: false, releaseUrl: '', message: 'Las actualizaciones están disponibles en la aplicación de Windows.' };
   const updateInProgress = updates.status === 'checking' || updates.status === 'downloading';
   const updateReady = updates.status === 'downloaded';
-  const hasUpdate = ['available', 'downloading', 'downloaded'].includes(updates.status);
-  const updateNotificationKey = `${updates.availableVersion ?? ''}:${updateReady ? 'ready' : 'available'}`;
+  const updateFailed = updates.status === 'error' && !!updates.availableVersion;
+  const hasUpdate = ['available', 'downloading', 'downloaded'].includes(updates.status) || updateFailed;
+  const updateNotificationKey = `${updates.availableVersion ?? ''}:${updates.status}`;
   const updateProgress = typeof updates.progress === 'number' ? Math.min(100, Math.max(0, Math.round(updates.progress))) : undefined;
   const updateStatusText = updateStatus(updates);
-  const openUpdates = () => { focusUpdates.current = true; setSettingsOpen(true); };
+  const openUpdates = () => { setSettingsOpen(false); setEditing(null); setConfirmClear(false); setUpdatesOpen(true); };
 
   useEffect(() => {
     let active = true;
@@ -185,27 +187,29 @@ export default function App() {
   }, [runAction, undoLast]);
 
   useLayoutEffect(() => {
-    if (!(settingsOpen || editing !== null || confirmClear)) return;
+    if (!(settingsOpen || updatesOpen || editing !== null || confirmClear)) return;
     const previous = document.activeElement as HTMLElement | null;
-    if (settingsOpen && focusUpdates.current && updatesSectionRef.current) {
-      focusUpdates.current = false;
-      updatesSectionRef.current.focus({ preventScroll: true });
-      updatesSectionRef.current.scrollIntoView({ block: 'nearest' });
-    } else {
-      document.querySelector<HTMLElement>('.modal input, .modal select, .modal button')?.focus();
-    }
+    const dialog = document.querySelector<HTMLElement>('.modal[role="dialog"]');
+    const focusable = () => [...(dialog?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]') ?? [])];
+    (dialog?.querySelector<HTMLElement>('[data-initial-focus]') ?? focusable()[0])?.focus();
     const handleModal = (event: KeyboardEvent) => {
       if (event.defaultPrevented) return;
-      if (event.key === 'Escape') {setSettingsOpen(false);setEditing(null);setConfirmClear(false);}
+      if (event.key === 'Escape') {event.preventDefault();setSettingsOpen(false);setUpdatesOpen(false);setEditing(null);setConfirmClear(false);}
       if (event.key !== 'Tab') return;
-      const elements = [...document.querySelectorAll<HTMLElement>('.modal button:not(:disabled), .modal input, .modal select')];
+      const elements = focusable();
       const first = elements[0], last = elements[elements.length - 1];
-      if (document.activeElement === updatesSectionRef.current) { event.preventDefault(); (event.shiftKey ? last : updatesSectionRef.current?.querySelector<HTMLButtonElement>('button:not(:disabled)') ?? first)?.focus(); return; }
+      if (!dialog?.contains(document.activeElement)) {event.preventDefault();(event.shiftKey ? last : first)?.focus();return;}
       if (event.shiftKey && document.activeElement === first) {event.preventDefault();last?.focus();}
       else if (!event.shiftKey && document.activeElement === last) {event.preventDefault();first?.focus();}
     };
-    addEventListener('keydown',handleModal); return () => {removeEventListener('keydown',handleModal);previous?.focus();};
-  }, [settingsOpen, editing, confirmClear]);
+    addEventListener('keydown',handleModal);
+    return () => {removeEventListener('keydown',handleModal);(previous?.isConnected ? previous : updatesOpen ? updatesButtonRef.current : inputRef.current)?.focus({preventScroll:true});};
+  }, [settingsOpen, updatesOpen, editing, confirmClear]);
+
+  useLayoutEffect(() => {
+    const dialog = updatesDialogRef.current;
+    if (updatesOpen && dialog && !dialog.contains(document.activeElement)) dialog.querySelector<HTMLButtonElement>('[data-initial-focus]')?.focus();
+  }, [updatesOpen, updates.status, updateAction]);
 
   const previewHtml = useMemo(() => {
     if (!codes.length) return '';
@@ -229,35 +233,48 @@ export default function App() {
     catch {setNotice({text:'No se pudo leer el portapapeles. Usa Ctrl + V en el campo de códigos.',error:true});}
   };
   const updatePrimaryAction = updateReady ? 'install' : updates.canAutoUpdate ? 'download' : 'releases';
-  const updatePrimaryLabel = updateReady ? 'Reiniciar e instalar' : updates.canAutoUpdate ? 'Descargar actualización' : 'Abrir descargas';
-  const updatePanel = <section className="updates-section" aria-labelledby="updates-title" ref={updatesSectionRef} tabIndex={-1}>
-    <div className="updates-heading"><div><RefreshCw size={16}/><h3 id="updates-title">Actualizaciones</h3></div><span className="version-tag">v{updates.currentVersion || version}</span></div>
+  const updatePrimaryLabel = updateReady ? 'Reiniciar e instalar' : updates.canAutoUpdate ? updateFailed ? 'Reintentar descarga' : 'Descargar actualización' : 'Abrir descargas';
+  const updatePrimaryDisabled = !!updateAction || !!busy || (updatePrimaryAction === 'releases' ? !desktop?.openReleasePage : updatePrimaryAction === 'install' ? !desktop?.installUpdate : !desktop?.downloadUpdate);
+  const updatePanel = <section className="updates-section" aria-label="Estado de actualización">
+    <div className="update-version-summary"><div><span>Versión actual</span><strong>v{updates.currentVersion || version}</strong></div>{hasUpdate && updates.availableVersion && <div><span>{updateReady ? 'Lista para instalar' : 'Versión disponible'}</span><strong>v{updates.availableVersion}</strong></div>}</div>
     <div className={`update-status ${updates.status === 'error' || updateError ? 'update-status-error' : ''}`} role="status" aria-live="polite">
       {updateInProgress ? <LoaderCircle size={17} className="spin"/> : updateReady || updates.status === 'up-to-date' ? <CheckCircle2 size={17}/> : <Download size={17}/>}
-      <div><strong>{updateStatusText}</strong>{updates.availableVersion && hasUpdate && <span>PhoneGest Barcode Studio {updates.availableVersion}</span>}{(updates.status === 'unsupported' || updates.status === 'error') && updates.message && <p>{updates.message}</p>}</div>
+      <div><strong>{updateStatusText}</strong>{updates.availableVersion && hasUpdate && <span>PhoneGest Barcode Studio {updates.availableVersion}</span>}{['unsupported', 'error', 'downloaded'].includes(updates.status) && updates.message && <p>{updates.message}</p>}</div>
     </div>
     {updates.status === 'downloading' && <div className="update-download-progress"><progress aria-label="Descarga de la actualización" value={updateProgress} max={100}/><span>{updateProgress === undefined ? 'Descargando…' : `${updateProgress} %`}</span></div>}
     {updateError && <p className="update-inline-error" role="alert">{updateError}</p>}
     <div className="updates-actions">
       <button className="button button-secondary" onClick={() => void runUpdateAction('check')} disabled={!desktop?.checkForUpdates || updateInProgress || !!updateAction}>{updates.status === 'checking' ? <LoaderCircle size={14} className="spin"/> : <RefreshCw size={14}/>}Buscar actualizaciones</button>
-      {((updates.canAutoUpdate && (updates.status === 'available' || updates.status === 'downloaded' || (updates.status === 'error' && updates.availableVersion))) || !updates.canAutoUpdate) && <button className="button button-primary" onClick={() => void runUpdateAction(updatePrimaryAction)} disabled={!!updateAction || !!busy || (updatePrimaryAction === 'releases' ? !desktop?.openReleasePage : updatePrimaryAction === 'install' ? !desktop?.installUpdate : !desktop?.downloadUpdate)}>{updateAction === updatePrimaryAction ? <LoaderCircle size={14} className="spin"/> : updatePrimaryAction === 'install' ? <RefreshCw size={14}/> : updatePrimaryAction === 'releases' ? <ArrowUpRight size={14}/> : <Download size={14}/>} {updatePrimaryLabel}</button>}
+      {((updates.canAutoUpdate && (updates.status === 'available' || updates.status === 'downloaded' || (updates.status === 'error' && updates.availableVersion))) || !updates.canAutoUpdate) && <button className="button button-primary" onClick={() => void runUpdateAction(updatePrimaryAction)} disabled={updatePrimaryDisabled}>{updateAction === updatePrimaryAction ? <LoaderCircle size={14} className="spin"/> : updatePrimaryAction === 'install' ? <RefreshCw size={14}/> : updatePrimaryAction === 'releases' ? <ArrowUpRight size={14}/> : <Download size={14}/>} {updatePrimaryLabel}</button>}
     </div>
     {formatLastChecked(updates.lastCheckedAt) && <p className="update-last-checked">Última comprobación: {formatLastChecked(updates.lastCheckedAt)}</p>}
     <p className="update-help">{updates.canAutoUpdate ? 'La aplicación busca y descarga nuevas versiones automáticamente. Tú decides cuándo reiniciar para instalarlas.' : 'En esta edición, las nuevas versiones se descargan desde la página de PhoneGest en GitHub.'}</p>
     <p className="update-privacy"><ShieldCheck size={13}/><span>Solo las actualizaciones usan conexión a Internet. Tus códigos se procesan siempre en este equipo.</span></p>
   </section>;
+  const updateBanner = hasUpdate && dismissedUpdate !== updateNotificationKey && <aside className="update-banner" aria-label="Nueva versión de PhoneGest" role="status">
+    <span className="update-banner-icon">{updates.status === 'downloading' ? <LoaderCircle size={19} className="spin"/> : updateReady ? <CheckCircle2 size={19}/> : <Download size={19}/>}</span>
+    <div><strong>{updateReady ? `Versión ${updates.availableVersion ?? ''} lista para instalar` : updates.status === 'downloading' ? `Descargando versión ${updates.availableVersion ?? ''}${updateProgress === undefined ? '' : ` · ${updateProgress} %`}` : `Versión ${updates.availableVersion ?? ''} disponible`}</strong><p>{updateFailed ? updates.message || 'No se pudo descargar la actualización. Puedes volver a intentarlo.' : updateReady ? 'Reinicia cuando te venga bien. Se conservará tu sesión.' : 'Puedes seguir generando códigos mientras se prepara la actualización.'}</p></div>
+    <button className="button button-secondary" onClick={openUpdates}>{updates.status === 'downloading' ? 'Ver progreso' : 'Ver detalles'}</button>
+    {(updateReady || updateFailed) && <button className="button button-primary" onClick={() => void runUpdateAction(updatePrimaryAction)} disabled={updatePrimaryDisabled}>{updateAction === updatePrimaryAction ? <LoaderCircle size={14} className="spin"/> : updateReady ? <RefreshCw size={14}/> : <Download size={14}/>} {updatePrimaryLabel}</button>}
+    <button className="icon-button small" onClick={() => setDismissedUpdate(updateNotificationKey)} aria-label="Ocultar aviso de actualización"><X size={15}/></button>
+  </aside>;
   const disabled = !codes.length || !!busy || !ready;
 
   return <div className="app-shell">
     <header className="app-header">
       <div className="brand">{logo ? <img src={logo} alt="PhoneGest" className="brand-logo"/> : <span className="brand-text">PhoneGest</span>}<span className="brand-divider"/><div className="brand-product"><span>Barcode Studio</span><span className="internal-tag">INTERNO</span></div></div>
-      <div className="header-tools"><span className="local-processing-badge"><span className="status-dot"/>Procesamiento local</span><span className="header-divider"/><button className={`icon-button update-header-button ${hasUpdate ? 'has-update' : ''}`} onClick={openUpdates} title={updateReady ? 'Actualización lista para instalar' : hasUpdate ? 'Hay una actualización de PhoneGest' : 'Actualizaciones'} aria-label="Actualizaciones">{updateInProgress ? <LoaderCircle size={18} className="spin"/> : <RefreshCw size={18}/>} {hasUpdate && <span className="update-indicator"/>}</button><button className="icon-button" onClick={() => setTheme(dark ? 'light' : 'dark')} title={dark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'} aria-label={dark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}>{dark ? <Sun size={19}/> : <Moon size={19}/>}</button><button className="icon-button" onClick={() => setSettingsOpen(true)} title="Configuración" aria-label="Configuración"><Settings2 size={19}/></button><span className="avatar" title="Uso interno PhoneGest">PG</span></div>
+      <div className="header-tools">
+        <span className="local-processing-badge"><span className="status-dot"/>Procesamiento local</span><span className="header-divider"/>
+        <button ref={updatesButtonRef} className={`button update-header-button ${hasUpdate ? 'has-update' : ''}`} onClick={openUpdates} title={updateReady ? 'Actualización lista para instalar' : hasUpdate ? 'Hay una actualización de PhoneGest' : 'Actualizaciones'} aria-label="Actualizaciones" aria-haspopup="dialog" aria-expanded={updatesOpen} aria-controls={updatesOpen ? 'updates-dialog' : undefined} aria-describedby={hasUpdate ? 'update-header-status' : undefined}>{updateInProgress ? <LoaderCircle size={16} className="spin"/> : <RefreshCw size={16}/>}<span>Actualizaciones</span>{hasUpdate && <span className="update-indicator" aria-hidden="true"/>}</button>
+        <span id="update-header-status" className="sr-only">{updateStatusText}{updates.availableVersion ? ` · Versión ${updates.availableVersion}` : ''}</span>
+        <button className="icon-button" onClick={() => setTheme(dark ? 'light' : 'dark')} title={dark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'} aria-label={dark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}>{dark ? <Sun size={19}/> : <Moon size={19}/>}</button><button className="icon-button" onClick={() => setSettingsOpen(true)} title="Configuración" aria-label="Configuración"><Settings2 size={19}/></button><span className="avatar" title="Uso interno PhoneGest">PG</span>
+      </div>
     </header>
+    {updateBanner}
 
     <main className="workspace">
       <div className="workspace-heading"><div><div className="eyebrow"><span className="eyebrow-line"/>TU ESPACIO DE TRABAJO</div><h1>De código a paquete.</h1><p>Genera tus etiquetas. Organiza tus envíos. Así de fácil.</p></div><div className="project-actions"><button className="button button-secondary" onClick={() => void runAction('openProject')} disabled={!!busy}><FolderOpen size={16}/>Abrir proyecto</button><button className="button button-secondary" onClick={() => void runAction('saveProject')} disabled={disabled}><Save size={16}/>Guardar proyecto</button></div></div>
 
-      {hasUpdate && dismissedUpdate !== updateNotificationKey && <aside className="update-banner" aria-label="Nueva versión de PhoneGest" role="status"><span className="update-banner-icon">{updates.status === 'downloading' ? <LoaderCircle size={19} className="spin"/> : updateReady ? <CheckCircle2 size={19}/> : <Download size={19}/>}</span><div><strong>{updateReady ? `Versión ${updates.availableVersion ?? ''} lista para instalar` : updates.status === 'downloading' ? `Descargando versión ${updates.availableVersion ?? ''}${updateProgress === undefined ? '' : ` · ${updateProgress} %`}` : `Versión ${updates.availableVersion ?? ''} disponible`}</strong><p>{updateReady ? 'Reinicia cuando te venga bien. Se conservará tu sesión.' : 'Puedes seguir generando códigos mientras se prepara la actualización.'}</p></div>{updates.status === 'downloading' ? <button className="button button-secondary" onClick={openUpdates}>Ver progreso</button> : <button className="button button-primary" onClick={() => void runUpdateAction(updatePrimaryAction)} disabled={!!updateAction || !!busy}>{updateAction ? <LoaderCircle size={14} className="spin"/> : updateReady ? <RefreshCw size={14}/> : <Download size={14}/>} {updatePrimaryLabel}</button>}<button className="icon-button small" onClick={() => setDismissedUpdate(updateNotificationKey)} aria-label="Ocultar aviso de actualización"><X size={15}/></button></aside>}
 
       <div className="studio-grid">
         <aside className="codes-column">
@@ -294,9 +311,17 @@ export default function App() {
 
     {notice && <div className={`toast ${notice.error?'toast-error':''}`} role={notice.error?'alert':'status'}>{notice.error?<X size={18}/>:<CheckCircle2 size={18}/>}<span>{notice.text}</span><button className="icon-button small" onClick={() => setNotice(null)} aria-label="Cerrar notificación"><X size={15}/></button></div>}
 
-    {settingsOpen && <div className="modal-overlay" onMouseDown={event=>{if(event.target===event.currentTarget)setSettingsOpen(false);}}><section className="modal settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title"><div className="modal-heading"><div className="heading-icon blue"><Settings2 size={20}/></div><div><h2 id="settings-title">Hazlo a tu medida</h2><p>Los cambios se aplican al instante.</p></div><button className="icon-button" onClick={()=>setSettingsOpen(false)} aria-label="Cerrar configuración"><X size={20}/></button></div><div className="modal-content"><label className="form-label">Título del documento <span>Opcional</span><input value={settings.documentTitle} maxLength={120} placeholder="Ej. Envío almacén · Noviembre" onChange={event=>changeSetting('documentTitle',event.target.value)}/></label><div className="form-label"><label htmlFor="settings-layout">Distribución</label><Select id="settings-layout" value={settings.layout} options={layoutOptions} onChange={value => changeSetting('layout', value)} ariaLabel="Distribución"/></div><div className="setting-row"><div><strong>Numerar los códigos</strong><p>Numeración continua en todo el documento.</p></div><input className="switch" type="checkbox" aria-label="Numerar los códigos" checked={settings.showNumbers} onChange={event=>changeSetting('showNumbers',event.target.checked)}/></div><label className="form-label inline-label">Empezar por el número<input type="number" min={1} max={999999} value={settings.startNumber} onChange={event=>changeSetting('startNumber',Math.min(999999,Math.max(1,Number(event.target.value)||1)))}/></label><div className="setting-row"><div><strong>Casillas para paquetes</strong><p>Una casilla junto a cada código.</p></div><input className="switch" type="checkbox" aria-label="Casillas para paquetes" checked={settings.showCheckboxes} onChange={event=>changeSetting('showCheckboxes',event.target.checked)}/></div><div className="setting-row"><div><strong>Mostrar identificadores</strong><p>Texto legible debajo del código de barras.</p></div><input className="switch" type="checkbox" aria-label="Mostrar identificadores" checked={settings.showText} onChange={event=>changeSetting('showText',event.target.checked)}/></div><div className="theme-setting"><span className="form-label">Apariencia</span><div className="theme-options">{(['light','dark','system'] as Theme[]).map((value)=><button key={value} className={theme===value?'selected':''} onClick={()=>setTheme(value)}>{value==='light'?<Sun size={16}/>:value==='dark'?<Moon size={16}/>:<Settings2 size={16}/>}{{light:'Claro',dark:'Oscuro',system:'Sistema'}[value]}</button>)}</div></div>{updatePanel}</div><div className="modal-footer"><span><ShieldCheck size={13}/>Se guarda en este equipo</span><button className="button button-primary" onClick={()=>setSettingsOpen(false)}><Check size={16}/>Listo</button></div></section></div>}
+    {updatesOpen && <div className="modal-overlay" onMouseDown={event => {if (event.target === event.currentTarget) {event.preventDefault();setUpdatesOpen(false);}}}>
+      <section id="updates-dialog" ref={updatesDialogRef} className="modal updates-modal" role="dialog" aria-modal="true" aria-labelledby="updates-dialog-title" aria-describedby="updates-dialog-description">
+        <div className="modal-heading"><div className="heading-icon blue"><RefreshCw size={20}/></div><div><h2 id="updates-dialog-title">Actualizaciones</h2><p id="updates-dialog-description">Consulta e instala nuevas versiones de la aplicación.</p></div><button className="icon-button" data-initial-focus onClick={() => setUpdatesOpen(false)} aria-label="Cerrar actualizaciones"><X size={20}/></button></div>
+        <div className="modal-content">{updatePanel}</div>
+        <div className="modal-footer"><span><ShieldCheck size={13}/>Tus códigos permanecen en este equipo</span><button className="button button-secondary" onClick={() => setUpdatesOpen(false)}>Cerrar</button></div>
+      </section>
+    </div>}
 
-    {editing!==null && <div className="modal-overlay"><section className="modal edit-modal" role="dialog" aria-modal="true" aria-labelledby="edit-title"><div className="modal-heading"><div className="heading-icon blue"><Pencil size={19}/></div><div><h2 id="edit-title">Editar código {editing+1}</h2><p>El código de barras se actualizará al guardar.</p></div><button className="icon-button" onClick={()=>setEditing(null)} aria-label="Cerrar edición"><X size={20}/></button></div><div className="modal-content"><label className="form-label">Identificador<input autoFocus className="code-edit-input" value={editValue} onChange={event=>{setEditValue(event.target.value);setEditError('');}} onKeyDown={event=>{if(event.key==='Enter')saveEdit();}} spellCheck={false}/></label>{editError&&<p role="alert" className="field-error">{editError}</p>}</div><div className="modal-footer"><button className="button button-secondary" onClick={()=>setEditing(null)}>Cancelar</button><button className="button button-primary" onClick={saveEdit}><Check size={16}/>Guardar cambio</button></div></section></div>}
+    {settingsOpen && <div className="modal-overlay" onMouseDown={event=>{if(event.target===event.currentTarget){event.preventDefault();setSettingsOpen(false);}}}><section className="modal settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title"><div className="modal-heading"><div className="heading-icon blue"><Settings2 size={20}/></div><div><h2 id="settings-title">Hazlo a tu medida</h2><p>Los cambios se aplican al instante.</p></div><button className="icon-button" onClick={()=>setSettingsOpen(false)} aria-label="Cerrar configuración"><X size={20}/></button></div><div className="modal-content"><label className="form-label">Título del documento <span>Opcional</span><input data-initial-focus value={settings.documentTitle} maxLength={120} placeholder="Ej. Envío almacén · Noviembre" onChange={event=>changeSetting('documentTitle',event.target.value)}/></label><div className="form-label"><label htmlFor="settings-layout">Distribución</label><Select id="settings-layout" value={settings.layout} options={layoutOptions} onChange={value => changeSetting('layout', value)} ariaLabel="Distribución"/></div><div className="setting-row"><div><strong>Numerar los códigos</strong><p>Numeración continua en todo el documento.</p></div><input className="switch" type="checkbox" aria-label="Numerar los códigos" checked={settings.showNumbers} onChange={event=>changeSetting('showNumbers',event.target.checked)}/></div><label className="form-label inline-label">Empezar por el número<input type="number" min={1} max={999999} value={settings.startNumber} onChange={event=>changeSetting('startNumber',Math.min(999999,Math.max(1,Number(event.target.value)||1)))}/></label><div className="setting-row"><div><strong>Casillas para paquetes</strong><p>Una casilla junto a cada código.</p></div><input className="switch" type="checkbox" aria-label="Casillas para paquetes" checked={settings.showCheckboxes} onChange={event=>changeSetting('showCheckboxes',event.target.checked)}/></div><div className="setting-row"><div><strong>Mostrar identificadores</strong><p>Texto legible debajo del código de barras.</p></div><input className="switch" type="checkbox" aria-label="Mostrar identificadores" checked={settings.showText} onChange={event=>changeSetting('showText',event.target.checked)}/></div><div className="theme-setting"><span className="form-label">Apariencia</span><div className="theme-options">{(['light','dark','system'] as Theme[]).map((value)=><button key={value} className={theme===value?'selected':''} onClick={()=>setTheme(value)}>{value==='light'?<Sun size={16}/>:value==='dark'?<Moon size={16}/>:<Settings2 size={16}/>}{{light:'Claro',dark:'Oscuro',system:'Sistema'}[value]}</button>)}</div></div></div><div className="modal-footer"><span><ShieldCheck size={13}/>Se guarda en este equipo</span><button className="button button-primary" onClick={()=>setSettingsOpen(false)}><Check size={16}/>Listo</button></div></section></div>}
+
+    {editing!==null && <div className="modal-overlay"><section className="modal edit-modal" role="dialog" aria-modal="true" aria-labelledby="edit-title"><div className="modal-heading"><div className="heading-icon blue"><Pencil size={19}/></div><div><h2 id="edit-title">Editar código {editing+1}</h2><p>El código de barras se actualizará al guardar.</p></div><button className="icon-button" onClick={()=>setEditing(null)} aria-label="Cerrar edición"><X size={20}/></button></div><div className="modal-content"><label className="form-label">Identificador<input data-initial-focus className="code-edit-input" value={editValue} onChange={event=>{setEditValue(event.target.value);setEditError('');}} onKeyDown={event=>{if(event.key==='Enter')saveEdit();}} spellCheck={false}/></label>{editError&&<p role="alert" className="field-error">{editError}</p>}</div><div className="modal-footer"><button className="button button-secondary" onClick={()=>setEditing(null)}>Cancelar</button><button className="button button-primary" onClick={saveEdit}><Check size={16}/>Guardar cambio</button></div></section></div>}
 
     {confirmClear && <div className="modal-overlay"><section className="modal edit-modal" role="dialog" aria-modal="true" aria-labelledby="clear-title"><div className="modal-heading"><div className="heading-icon red"><Trash2 size={20}/></div><div><h2 id="clear-title">Vaciar el documento</h2><p>Se quitarán los {codes.length} códigos de la lista.</p></div></div><div className="modal-content"><p className="confirm-text">Puedes recuperar la lista con el botón Deshacer.</p></div><div className="modal-footer"><button className="button button-secondary" onClick={()=>setConfirmClear(false)}>Cancelar</button><button className="button button-danger" onClick={()=>{updateCodes([]);setConfirmClear(false);}}>Vaciar documento</button></div></section></div>}
   </div>;
@@ -311,7 +336,7 @@ function updateStatus(state: UpdateState) {
     case 'downloading': return 'Descargando actualización';
     case 'downloaded': return 'Todo listo para actualizar';
     case 'up-to-date': return 'Tienes la última versión';
-    case 'error': return 'No se pudo comprobar la actualización';
+    case 'error': return 'No se pudo completar la actualización';
     case 'unsupported': return 'Actualización mediante descarga';
     default: return 'Las actualizaciones se comprueban automáticamente';
   }
