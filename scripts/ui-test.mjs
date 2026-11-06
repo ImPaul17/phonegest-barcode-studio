@@ -137,7 +137,9 @@ try {
   application = await electron.launch({executablePath:require('electron'),args:[path.join(root,'scripts','ui-harness.mjs')],env,timeout:45000});
   const page = await application.firstWindow();
   page.on('pageerror',error=>errors.push(error.message));
-  await page.getByRole('heading',{name:'De código a paquete.'}).waitFor();
+  await page.getByRole('main',{name:'Espacio de trabajo',exact:true}).waitFor();
+  const packageInfo = JSON.parse(await readFile(path.join(root,'package.json'),'utf8'));
+  await page.locator('.bottom-meta').getByText(`v${packageInfo.displayVersion || packageInfo.version}`,{exact:true}).waitFor();
   await page.getByRole('button',{name:'Probar con un ejemplo'}).click();
   await page.getByRole('button',{name:'Añadir códigos'}).click();
   await page.getByText('3 códigos listos para exportar',{exact:true}).waitFor();

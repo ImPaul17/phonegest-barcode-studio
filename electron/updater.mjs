@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { UPDATE_FEED, UPDATE_RELEASE_URL, secureUpdateSession } from './updater-policy.mjs';
+import { getDisplayVersion } from '../shared/version.mjs';
 
 export const INITIAL_CHECK_DELAY_MS = 8000;
 export const CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000;
@@ -9,6 +10,7 @@ const cleanVersion = (value) => typeof value === 'string' && /^\d+\.\d+\.\d+(?:[
 /** The controller receives update actions only: no document/session content enters it. */
 export function createUpdateController({
   currentVersion,
+  currentDisplayVersion,
   updater = null,
   unsupportedReason = 'Instala PhoneGest Barcode Studio para recibir actualizaciones desde la aplicación.',
   onState = () => {},
@@ -21,6 +23,7 @@ export function createUpdateController({
   let state = {
     status: updater ? 'idle' : 'unsupported',
     currentVersion,
+    currentDisplayVersion: getDisplayVersion(currentVersion, currentDisplayVersion),
     canAutoUpdate: Boolean(updater),
     releaseUrl: UPDATE_RELEASE_URL,
     ...(updater ? {} : { message: unsupportedReason }),
@@ -68,11 +71,11 @@ export function createUpdateController({
     updater.setFeedURL({ ...UPDATE_FEED });
     listen('login', (_authInfo, callback) => callback());
     listen('checking-for-update', () => publish({ status: 'checking', message: undefined, progress: undefined }));
-    listen('update-not-available', () => publish({ status: 'up-to-date', message: 'Tienes la última versión.', availableVersion: undefined, progress: undefined, lastCheckedAt: now().toISOString() }));
+    listen('update-not-available', () => publish({ status: 'up-to-date', message: 'Tienes la última versión.', availableVersion: undefined, availableDisplayVersion: undefined, progress: undefined, lastCheckedAt: now().toISOString() }));
     listen('update-available', (info) => {
       const version = cleanVersion(info?.version);
       if (!version) { fail(); return; }
-      publish({ status: 'available', availableVersion: version, progress: 0, message: 'Se está preparando la descarga de la actualización.', lastCheckedAt: now().toISOString() });
+      publish({ status: 'available', availableVersion: version, availableDisplayVersion: getDisplayVersion(version, info?.releaseName), progress: 0, message: 'Se está preparando la descarga de la actualización.', lastCheckedAt: now().toISOString() });
     });
     listen('download-progress', (progress) => {
       const percent = Number(progress?.percent);
@@ -80,7 +83,8 @@ export function createUpdateController({
     });
     listen('update-downloaded', (info) => {
       const version = cleanVersion(info?.version) || state.availableVersion;
-      publish({ status: 'downloaded', availableVersion: version, progress: 100, message: 'La actualización está lista. Reinicia cuando te venga bien.' });
+      const displayVersion = info?.releaseName ?? (version === state.availableVersion ? state.availableDisplayVersion : undefined);
+      publish({ status: 'downloaded', availableVersion: version, availableDisplayVersion: getDisplayVersion(version, displayVersion), progress: 100, message: 'La actualización está lista. Reinicia cuando te venga bien.' });
     });
     listen('error', () => {
       if (installing) {

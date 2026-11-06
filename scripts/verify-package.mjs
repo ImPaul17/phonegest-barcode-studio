@@ -11,6 +11,10 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = path.resolve(process.argv[2] || path.join(root, 'release', 'win-unpacked'));
 const archive = path.join(output, 'resources', 'app.asar');
 const hash = (buffer) => createHash('sha256').update(buffer).digest('hex');
+const packageInfo = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
+const packedPackage = JSON.parse(extractFile(archive, 'package.json').toString('utf8'));
+assert.equal(packedPackage.version, packageInfo.version, 'La versión interna empaquetada no coincide.');
+assert.equal(packedPackage.displayVersion, packageInfo.displayVersion, 'La versión visible empaquetada no coincide.');
 
 async function enumerate(directory, prefix = directory) {
   const entries = await readdir(path.join(root, directory), { withFileTypes: true });
@@ -42,7 +46,7 @@ const shippedNotices = await readFile(path.join(output, 'THIRD-PARTY-NOTICES.txt
 assert.equal(hash(shippedNotices), hash(sourceNotices), 'Los avisos de licencia no coinciden.');
 await access(path.join(output, 'LICENSE.electron.txt'));
 await access(path.join(output, 'LICENSES.chromium.html'));
-const result = { success: true, output, files, noticesSha256: hash(shippedNotices) };
+const result = { success: true, version: packedPackage.version, displayVersion: packedPackage.displayVersion, output, files, noticesSha256: hash(shippedNotices) };
 await mkdir(path.join(root, 'build'), { recursive: true });
 await writeFile(path.join(root, 'build', 'package-verification.json'), JSON.stringify(result, null, 2));
 console.log(JSON.stringify({ success: true, files: files.length, notices: true, runtimeLicenses: true }));

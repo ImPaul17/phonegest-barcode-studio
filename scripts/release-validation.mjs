@@ -18,9 +18,10 @@ export function validateReleaseTag(tag, version) {
   assert.equal(tag, `v${version}`, 'La etiqueta debe ser v + la versión exacta de package.json.');
 }
 
-export function validateUpdateMetadata(metadata, { version, installerName, installerSize, installerSha512 }) {
+export function validateUpdateMetadata(metadata, { version, displayVersion, installerName, installerSize, installerSha512 }) {
   assert.ok(metadata && typeof metadata === 'object', 'latest.yml debe contener un objeto.');
   assert.equal(metadata.version, version, 'latest.yml contiene otra versión.');
+  if (displayVersion !== undefined) assert.equal(metadata.releaseName, displayVersion, 'latest.yml contiene otra versión visible.');
   assert.equal(metadata.path, installerName, 'La actualización debe apuntar al instalador NSIS de esta versión.');
   assert.equal(metadata.sha512, installerSha512, 'SHA512 principal incorrecto.');
   assert.ok(Array.isArray(metadata.files) && metadata.files.length === 1, 'latest.yml debe anunciar un único instalador x64.');
@@ -46,7 +47,7 @@ async function assertExecutable(filename) {
   } finally { await handle.close(); }
 }
 
-export async function validateReleaseArtifacts(directory, version) {
+export async function validateReleaseArtifacts(directory, version, displayVersion) {
   const names = releaseAssetNames(version);
   const assets = [];
   for (const name of names) {
@@ -62,6 +63,7 @@ export async function validateReleaseArtifacts(directory, version) {
   const metadata = yaml.load(await readFile(latest, 'utf8'), { schema: yaml.JSON_SCHEMA });
   validateUpdateMetadata(metadata, {
     version,
+    displayVersion,
     installerName: names[0],
     installerSize: assets[0].bytes,
     installerSha512: await fileHash(installer, 'sha512', 'base64'),
@@ -80,7 +82,7 @@ export async function validateReleaseArtifacts(directory, version) {
     coveredThrough = Math.max(coveredThrough, end);
   }
   assert.equal(coveredThrough, assets[0].bytes, 'El blockmap no cubre el instalador completo.');
-  return { success: true, version, assets, updateFile: names[0] };
+  return { success: true, version, displayVersion, assets, updateFile: names[0] };
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
@@ -88,7 +90,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const packageInfo = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
   if (process.env.RELEASE_TAG) validateReleaseTag(process.env.RELEASE_TAG, packageInfo.version);
   const directory = path.resolve(process.argv[2] || path.join(root, 'release'));
-  const result = await validateReleaseArtifacts(directory, packageInfo.version);
+  const result = await validateReleaseArtifacts(directory, packageInfo.version, packageInfo.displayVersion);
   await writeFile(path.join(directory, 'release-validation.json'), JSON.stringify(result, null, 2));
   console.log(JSON.stringify(result, null, 2));
 }

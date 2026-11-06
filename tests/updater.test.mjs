@@ -16,6 +16,50 @@ class MockUpdater extends EventEmitter {
   quitAndInstall(...args) { this.installs.push(args); }
 }
 
+test('display labels remain separate from numeric update versions through download and reset', () => {
+  const updater = new MockUpdater();
+  const controller = createUpdateController({ currentVersion: '1.0.5', currentDisplayVersion: '1.0.4b', updater });
+  assert.equal(controller.getState().currentVersion, '1.0.5');
+  assert.equal(controller.getState().currentDisplayVersion, '1.0.4b');
+  updater.emit('update-available', { version: '1.0.6', releaseName: 'PhoneGest Barcode Studio 1.0.4c' });
+  assert.equal(controller.getState().availableVersion, '1.0.6');
+  assert.equal(controller.getState().availableDisplayVersion, '1.0.4c');
+  updater.emit('download-progress', { percent: 70 });
+  updater.emit('update-downloaded', { version: '1.0.6' });
+  assert.equal(controller.getState().availableVersion, '1.0.6');
+  assert.equal(controller.getState().availableDisplayVersion, '1.0.4c');
+  updater.emit('update-not-available', { version: '1.0.5' });
+  assert.equal(controller.getState().availableVersion, undefined);
+  assert.equal(controller.getState().availableDisplayVersion, undefined);
+  assert.equal(controller.getState().currentDisplayVersion, '1.0.4b');
+  controller.dispose();
+});
+
+test('older numeric clients can receive a labelled release and malformed names safely fall back', () => {
+  const updater = new MockUpdater();
+  const controller = createUpdateController({ currentVersion: '1.0.4', updater });
+  updater.emit('update-available', { version: '1.0.5', releaseName: '1.0.4b' });
+  assert.equal(controller.getState().currentVersion, '1.0.4');
+  assert.equal(controller.getState().currentDisplayVersion, '1.0.4');
+  assert.equal(controller.getState().availableVersion, '1.0.5');
+  assert.equal(controller.getState().availableDisplayVersion, '1.0.4b');
+  updater.emit('update-available', { version: '1.0.6', releaseName: '<script>private remote text</script>' });
+  assert.equal(controller.getState().availableDisplayVersion, '1.0.6');
+  updater.emit('update-downloaded', { version: '1.0.7', releaseName: '1.0.4d' });
+  assert.equal(controller.getState().availableVersion, '1.0.7');
+  assert.equal(controller.getState().availableDisplayVersion, '1.0.4d');
+  assert.equal(JSON.stringify(controller.getState()).includes('private remote text'), false);
+  controller.dispose();
+});
+
+test('unsupported desktop editions retain their configured display label without network access', () => {
+  const controller = createDesktopUpdateController({ app: { isPackaged: false, getVersion: () => '1.0.5' }, currentDisplayVersion: '1.0.4b' });
+  assert.equal(controller.getState().status, 'unsupported');
+  assert.equal(controller.getState().currentVersion, '1.0.5');
+  assert.equal(controller.getState().currentDisplayVersion, '1.0.4b');
+  controller.dispose();
+});
+
 test('update policy permits only this public repository and its release CDN redirects', () => {
   for (const url of [
     `${UPDATE_RELEASE_URL}`,

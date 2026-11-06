@@ -1,5 +1,5 @@
 PHONEGEST BARCODE STUDIO - AVISOS DE TERCEROS
-Version: 1.0.4
+Version: 1.0.5
 
 PhoneGest conserva los derechos sobre su nombre, logo e identidad visual.
 Los componentes de terceros mantienen sus licencias, reproducidas en su

@@ -10,10 +10,12 @@ Descarga los ejecutables desde [GitHub Releases](https://github.com/ImPaul17/pho
 
 | Archivo | Uso |
 | --- | --- |
-| `PhoneGest-Barcode-Studio-1.0.4-Instalador.exe` | Instala para el usuario actual, crea accesos y permite actualizar desde la aplicación. |
-| `PhoneGest-Barcode-Studio-1.0.4-Portable.exe` | Abre sin instalar. Para actualizar, descarga y ejecuta un portable nuevo. |
+| `PhoneGest-Barcode-Studio-1.0.5-Instalador.exe` | Instala la versión **1.0.4b**, crea accesos y permite actualizar desde la aplicación. |
+| `PhoneGest-Barcode-Studio-1.0.5-Portable.exe` | Abre **1.0.4b** sin instalar. Para actualizar, descarga y ejecuta un portable nuevo. |
 
 El número de versión del nombre cambia en cada publicación. Ambas variantes trabajan offline y guardan la sesión en el perfil del usuario de Windows. La edición portable también utiliza ese perfil; los datos de trabajo no viajan dentro del ejecutable.
+
+La versión visible actual es **1.0.4b**. Las mejoras pequeñas pueden identificarse con letras; el instalador, la etiqueta de GitHub y el actualizador mantienen una versión numérica interna creciente, **1.0.5** en esta publicación. Al actualizar desde 1.0.4 puede aparecer primero ese número; tras instalar, la aplicación muestra **1.0.4b**.
 
 Los ejecutables actuales no tienen certificado de firma digital. Windows puede identificar al editor como desconocido. Utiliza los archivos del repositorio de PhoneGest enlazado arriba.
 

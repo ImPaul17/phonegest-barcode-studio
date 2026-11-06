@@ -3,13 +3,17 @@ import { readFile, writeFile, rename, mkdir, stat, access, unlink } from 'node:f
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { randomUUID } from 'node:crypto';
+import { createRequire } from 'node:module';
 import { renderDocument } from '../shared/index.mjs';
+import { getDisplayVersion } from '../shared/version.mjs';
 import { validatePayload, validateSession, createProject, readProject, safeFilename, MAX_FILE_BYTES } from './validation.mjs';
 import { isAllowedResourceUrl } from './security.mjs';
 import { createLabelPng } from './image-export.mjs';
 import { createDesktopUpdateController } from './updater.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const packageInfo = createRequire(import.meta.url)('../package.json');
+const appDisplayVersion = getDisplayVersion(app.getVersion(), packageInfo.displayVersion);
 const INDEX_PATH = path.join(ROOT, 'dist', 'index.html');
 const INDEX_URL = pathToFileURL(INDEX_PATH).href;
 const smokeIndex = process.argv.indexOf('--smoke-test');
@@ -200,7 +204,7 @@ async function writeImages(payload, directory) {
 }
 
 function registerHandlers() {
-  handle('getAppInfo', () => ({ version: app.getVersion(), platform: process.platform, logoDataUrl }));
+  handle('getAppInfo', () => ({ version: app.getVersion(), displayVersion: appDisplayVersion, platform: process.platform, logoDataUrl }));
   handle('getUpdateState', () => updateController.getState());
   handle('checkForUpdates', () => updateController.checkForUpdates());
   handle('downloadUpdate', () => updateController.downloadUpdate());
@@ -340,6 +344,7 @@ if (gotLock) {
     updateController = createDesktopUpdateController({
       app,
       isSmoke,
+      currentDisplayVersion: appDisplayVersion,
       onState: (state) => {
         if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.webContents.isDestroyed()) mainWindow.webContents.send('phonegest:updateState', state);
       },

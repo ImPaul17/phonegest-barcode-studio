@@ -27,11 +27,11 @@ contextBridge.exposeInMainWorld('phonegest', {
 const main = `const {app, BrowserWindow, ipcMain} = require('electron');
 app.setPath('userData', ${JSON.stringify(path.join(fixture, 'user-data'))});
 let window;
-const fixture = { state: ${JSON.stringify(initial)}, calls: [], releaseOpens: 0, failSave: false, offline: false,
+const fixture = { state: ${JSON.stringify(initial)}, info: {version:'1.0.1',platform:'win32',logoDataUrl:''}, calls: [], releaseOpens: 0, failSave: false, offline: false,
   setState(value) { this.state = {...this.state, ...value}; window.webContents.send('fixture:changed', this.state); }
 };
 globalThis.phonegestFixture = fixture;
-ipcMain.handle('fixture:info', () => ({version:'1.0.1', platform:'win32', logoDataUrl:''}));
+ipcMain.handle('fixture:info', () => fixture.info);
 ipcMain.handle('fixture:load', () => null);
 ipcMain.handle('fixture:save', (_event, session) => { fixture.calls.push({method:'save', session}); return !fixture.failSave; });
 ipcMain.handle('fixture:state', () => fixture.state);
@@ -214,8 +214,38 @@ try {
   await page.keyboard.press('Escape');
   await updatesDialog.waitFor({ state: 'hidden' });
   assert.equal(await updatesButton.evaluate(element => document.activeElement === element), true);
+
+  // Keep the legacy fixture above unchanged, then exercise display names separately.
+  await application.evaluate(() => {
+    globalThis.phonegestFixture.info = { version: '1.0.5', displayVersion: '1.0.4b', platform: 'win32', logoDataUrl: '' };
+    globalThis.phonegestFixture.state = { status: 'idle', currentVersion: '1.0.5', canAutoUpdate: true, releaseUrl: 'https://github.com/ImPaul17/phonegest-barcode-studio/releases/latest' };
+  });
+  await page.reload();
+  await page.locator('.bottom-meta').getByText('v1.0.4b', { exact: true }).waitFor();
+  await openUpdates();
+  await updateStatus.getByText('v1.0.4b', { exact: true }).waitFor();
+  assert.equal(await updateStatus.getByText('v1.0.5', { exact: true }).count(), 0, 'The current display name is used when an older update state omits it');
+  await closeUpdates();
+  await setState({ status: 'available', currentDisplayVersion: '1.0.4b', availableVersion: '1.0.6', availableDisplayVersion: '1.0.4c' });
+  await banner.getByText('Versión 1.0.4c disponible', { exact: true }).waitFor();
+  const description = await updatesButton.evaluate(element => document.getElementById(element.getAttribute('aria-describedby'))?.textContent || '');
+  assert.ok(description.includes('1.0.4c'), 'The accessible notice uses the available display version');
+  assert.ok(!description.includes('1.0.6'), 'Internal numeric versions are not announced as display names');
+  await capture('display-version-banner');
+  await banner.getByRole('button', { name: 'Ver detalles', exact: true }).click();
+  await updateStatus.getByText('v1.0.4b', { exact: true }).waitFor();
+  await updateStatus.getByText('v1.0.4c', { exact: true }).waitFor();
+  await capture('display-version-menu');
+  await updateStatus.getByRole('button', { name: 'Descargar actualización', exact: true }).click();
+  await banner.getByText('Descargando versión 1.0.4c · 25 %', { exact: true }).waitFor();
+  await closeUpdates();
+  await setState({ status: 'downloaded', progress: 100 });
+  await banner.getByText('Versión 1.0.4c lista para instalar', { exact: true }).waitFor();
+  const numericState = await page.evaluate(() => window.phonegest.getUpdateState());
+  assert.equal(numericState.currentVersion, '1.0.5');
+  assert.equal(numericState.availableVersion, '1.0.6');
   assert.deepEqual(errors, []);
-  const report = { success: true, checks: ['explicit updates header button', 'updates separated from document settings', 'dedicated dialog and single modal', 'Tab trap and Escape/button/outside focus restoration', 'manual check and current version', 'global banner above workspace', 'light and dark banner/menu', 'download progress', 'known-version error retains indicator and retries download', 'dismissed notice keeps accessible header indicator', 'new state/version resurfaces notice', 'repeated state/progress stays dismissed', 'session saved before restart', 'failed save prevents restart', 'offline update failure permits barcode work without false update notice', 'portable manual downloads', 'no renderer errors'], screenshots: output };
+  const report = { success: true, checks: ['explicit updates header button', 'updates separated from document settings', 'dedicated dialog and single modal', 'Tab trap and Escape/button/outside focus restoration', 'manual check and current version', 'global banner above workspace', 'light and dark banner/menu', 'download progress', 'known-version error retains indicator and retries download', 'dismissed notice keeps accessible header indicator', 'new state/version resurfaces notice', 'repeated state/progress stays dismissed', 'session saved before restart', 'failed save prevents restart', 'offline update failure permits barcode work without false update notice', 'portable manual downloads', 'legacy numeric version fallback', 'display versions in footer/menu/notices with numeric updater versions', 'no renderer errors'], screenshots: output };
   await writeFile(path.join(output, 'phonegest-updates-ui-report.json'), JSON.stringify(report, null, 2));
   console.log(JSON.stringify(report, null, 2));
 } finally {

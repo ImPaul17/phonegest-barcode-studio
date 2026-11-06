@@ -1,6 +1,7 @@
 {
   "name": "phonegest-barcode-studio",
-  "version": "1.0.4",
+  "version": "1.0.5",
+  "displayVersion": "1.0.4b",
   "private": true,
   "description": "Generador offline de códigos de barras para uso interno de PhoneGest",
   "author": "PhoneGest",

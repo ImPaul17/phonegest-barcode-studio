@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, ArrowUpRight, Barcode, Check, CheckCheck, CheckCircle2, ChevronLeft, ChevronRight, ClipboardPaste, Download, FileDown, FilePlus2, FileText, FolderOpen, GripVertical, ImageDown, ListOrdered, LoaderCircle, Minus, Moon, PackageCheck, Pencil, Plus, Printer, RefreshCw, RotateCcw, Save, ScanLine, Settings2, ShieldCheck, Sun, Trash2, X, ZoomIn } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpRight, Barcode, Check, CheckCheck, CheckCircle2, ChevronLeft, ChevronRight, ClipboardPaste, Download, FileDown, FilePlus2, FileText, FolderOpen, GripVertical, ImageDown, ListOrdered, LoaderCircle, Minus, Moon, Pencil, Plus, Printer, RefreshCw, RotateCcw, Save, ScanLine, Settings2, ShieldCheck, Sun, Trash2, X, ZoomIn } from 'lucide-react';
 import { parseCodes, renderDocument, validateCode, normalizeSettings } from '../shared/index.mjs';
 import type { Project, Session, Settings, Theme, UpdateState } from './types';
 import Select from './components/Select';
@@ -20,6 +20,7 @@ export default function App() {
   const [input, setInput] = useState('');
   const [logo, setLogo] = useState('');
   const [version, setVersion] = useState('1.0.0');
+  const [displayVersion, setDisplayVersion] = useState('');
   const [ready, setReady] = useState(false);
   const [saveError, setSaveError] = useState(false);
   const [busy, setBusy] = useState('');
@@ -50,7 +51,9 @@ export default function App() {
   const duplicates = codes.length - new Set(codes).size;
   const project: Project = useMemo(() => ({codes, settings}), [codes, settings]);
   const parsed = useMemo(() => parseCodes(input), [input]);
-  const updates: UpdateState = updateState ?? { status: 'unsupported', currentVersion: version, canAutoUpdate: false, releaseUrl: '', message: 'Las actualizaciones están disponibles en la aplicación de Windows.' };
+  const updates: UpdateState = updateState ?? { status: 'unsupported', currentVersion: version, currentDisplayVersion: displayVersion, canAutoUpdate: false, releaseUrl: '', message: 'Las actualizaciones están disponibles en la aplicación de Windows.' };
+  const currentDisplayVersion = updates.currentDisplayVersion || displayVersion || updates.currentVersion || version;
+  const availableDisplayVersion = updates.availableDisplayVersion || updates.availableVersion || '';
   const updateInProgress = updates.status === 'checking' || updates.status === 'downloading';
   const updateReady = updates.status === 'downloaded';
   const updateFailed = updates.status === 'error' && !!updates.availableVersion;
@@ -70,7 +73,7 @@ export default function App() {
         if (desktop) {
           const [info, saved] = await Promise.all([desktop.getAppInfo(), desktop.loadSession()]);
           if (!active) return;
-          setLogo(info.logoDataUrl); setVersion(info.version);
+          setLogo(info.logoDataUrl); setVersion(info.version); setDisplayVersion(info.displayVersion || '');
           if (saved) { setCodes(saved.codes); setSettings({...INITIAL_SETTINGS, ...normalizeSettings(saved.settings)} as Settings); setTheme(saved.theme || 'light'); setInput(saved.input || ''); }
         }
       } catch (error) { if (active) setNotice({text: `No se pudo recuperar la sesión: ${errorMessage(error)}`, error: true}); }
@@ -101,7 +104,7 @@ export default function App() {
   useEffect(() => { if (!notice) return; const timer = setTimeout(() => setNotice(null), notice.error ? 9000 : 5000); return () => clearTimeout(timer); }, [notice]);
   useEffect(() => {
     if (!autoFit || !previewRef.current) return;
-    const observer = new ResizeObserver(([entry]) => setZoom(Math.min(0.84, Math.max(0.25, Math.min((entry.contentRect.width - 24) / 794, (entry.contentRect.height - 10) / 1123)))));
+    const observer = new ResizeObserver(([entry]) => setZoom(Math.min(1.4, Math.max(0.1, Math.min((entry.contentRect.width - 24) / 794, (entry.contentRect.height - 10) / 1123)))));
     observer.observe(previewRef.current);
     return () => observer.disconnect();
   }, [autoFit]);
@@ -236,10 +239,10 @@ export default function App() {
   const updatePrimaryLabel = updateReady ? 'Reiniciar e instalar' : updates.canAutoUpdate ? updateFailed ? 'Reintentar descarga' : 'Descargar actualización' : 'Abrir descargas';
   const updatePrimaryDisabled = !!updateAction || !!busy || (updatePrimaryAction === 'releases' ? !desktop?.openReleasePage : updatePrimaryAction === 'install' ? !desktop?.installUpdate : !desktop?.downloadUpdate);
   const updatePanel = <section className="updates-section" aria-label="Estado de actualización">
-    <div className="update-version-summary"><div><span>Versión actual</span><strong>v{updates.currentVersion || version}</strong></div>{hasUpdate && updates.availableVersion && <div><span>{updateReady ? 'Lista para instalar' : 'Versión disponible'}</span><strong>v{updates.availableVersion}</strong></div>}</div>
+    <div className="update-version-summary"><div><span>Versión actual</span><strong>v{currentDisplayVersion}</strong></div>{hasUpdate && updates.availableVersion && <div><span>{updateReady ? 'Lista para instalar' : 'Versión disponible'}</span><strong>v{availableDisplayVersion}</strong></div>}</div>
     <div className={`update-status ${updates.status === 'error' || updateError ? 'update-status-error' : ''}`} role="status" aria-live="polite">
       {updateInProgress ? <LoaderCircle size={17} className="spin"/> : updateReady || updates.status === 'up-to-date' ? <CheckCircle2 size={17}/> : <Download size={17}/>}
-      <div><strong>{updateStatusText}</strong>{updates.availableVersion && hasUpdate && <span>PhoneGest Barcode Studio {updates.availableVersion}</span>}{['unsupported', 'error', 'downloaded'].includes(updates.status) && updates.message && <p>{updates.message}</p>}</div>
+      <div><strong>{updateStatusText}</strong>{updates.availableVersion && hasUpdate && <span>PhoneGest Barcode Studio {availableDisplayVersion}</span>}{['unsupported', 'error', 'downloaded'].includes(updates.status) && updates.message && <p>{updates.message}</p>}</div>
     </div>
     {updates.status === 'downloading' && <div className="update-download-progress"><progress aria-label="Descarga de la actualización" value={updateProgress} max={100}/><span>{updateProgress === undefined ? 'Descargando…' : `${updateProgress} %`}</span></div>}
     {updateError && <p className="update-inline-error" role="alert">{updateError}</p>}
@@ -253,7 +256,7 @@ export default function App() {
   </section>;
   const updateBanner = hasUpdate && dismissedUpdate !== updateNotificationKey && <aside className="update-banner" aria-label="Nueva versión de PhoneGest" role="status">
     <span className="update-banner-icon">{updates.status === 'downloading' ? <LoaderCircle size={19} className="spin"/> : updateReady ? <CheckCircle2 size={19}/> : <Download size={19}/>}</span>
-    <div><strong>{updateReady ? `Versión ${updates.availableVersion ?? ''} lista para instalar` : updates.status === 'downloading' ? `Descargando versión ${updates.availableVersion ?? ''}${updateProgress === undefined ? '' : ` · ${updateProgress} %`}` : `Versión ${updates.availableVersion ?? ''} disponible`}</strong><p>{updateFailed ? updates.message || 'No se pudo descargar la actualización. Puedes volver a intentarlo.' : updateReady ? 'Reinicia cuando te venga bien. Se conservará tu sesión.' : 'Puedes seguir generando códigos mientras se prepara la actualización.'}</p></div>
+    <div><strong>{updateReady ? `Versión ${availableDisplayVersion} lista para instalar` : updates.status === 'downloading' ? `Descargando versión ${availableDisplayVersion}${updateProgress === undefined ? '' : ` · ${updateProgress} %`}` : `Versión ${availableDisplayVersion} disponible`}</strong><p>{updateFailed ? updates.message || 'No se pudo descargar la actualización. Puedes volver a intentarlo.' : updateReady ? 'Reinicia cuando te venga bien. Se conservará tu sesión.' : 'Puedes seguir generando códigos mientras se prepara la actualización.'}</p></div>
     <button className="button button-secondary" onClick={openUpdates}>{updates.status === 'downloading' ? 'Ver progreso' : 'Ver detalles'}</button>
     {(updateReady || updateFailed) && <button className="button button-primary" onClick={() => void runUpdateAction(updatePrimaryAction)} disabled={updatePrimaryDisabled}>{updateAction === updatePrimaryAction ? <LoaderCircle size={14} className="spin"/> : updateReady ? <RefreshCw size={14}/> : <Download size={14}/>} {updatePrimaryLabel}</button>}
     <button className="icon-button small" onClick={() => setDismissedUpdate(updateNotificationKey)} aria-label="Ocultar aviso de actualización"><X size={15}/></button>
@@ -266,15 +269,14 @@ export default function App() {
       <div className="header-tools">
         <span className="local-processing-badge"><span className="status-dot"/>Procesamiento local</span><span className="header-divider"/>
         <button ref={updatesButtonRef} className={`button update-header-button ${hasUpdate ? 'has-update' : ''}`} onClick={openUpdates} title={updateReady ? 'Actualización lista para instalar' : hasUpdate ? 'Hay una actualización de PhoneGest' : 'Actualizaciones'} aria-label="Actualizaciones" aria-haspopup="dialog" aria-expanded={updatesOpen} aria-controls={updatesOpen ? 'updates-dialog' : undefined} aria-describedby={hasUpdate ? 'update-header-status' : undefined}>{updateInProgress ? <LoaderCircle size={16} className="spin"/> : <RefreshCw size={16}/>}<span>Actualizaciones</span>{hasUpdate && <span className="update-indicator" aria-hidden="true"/>}</button>
-        <span id="update-header-status" className="sr-only">{updateStatusText}{updates.availableVersion ? ` · Versión ${updates.availableVersion}` : ''}</span>
+        <span id="update-header-status" className="sr-only">{updateStatusText}{updates.availableVersion ? ` · Versión ${availableDisplayVersion}` : ''}</span>
         <button className="icon-button" onClick={() => setTheme(dark ? 'light' : 'dark')} title={dark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'} aria-label={dark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}>{dark ? <Sun size={19}/> : <Moon size={19}/>}</button><button className="icon-button" onClick={() => setSettingsOpen(true)} title="Configuración" aria-label="Configuración"><Settings2 size={19}/></button><span className="avatar" title="Uso interno PhoneGest">PG</span>
       </div>
     </header>
     {updateBanner}
 
-    <main className="workspace">
-      <div className="workspace-heading"><div><div className="eyebrow"><span className="eyebrow-line"/>TU ESPACIO DE TRABAJO</div><h1>De código a paquete.</h1><p>Genera tus etiquetas. Organiza tus envíos. Así de fácil.</p></div><div className="project-actions"><button className="button button-secondary" onClick={() => void runAction('openProject')} disabled={!!busy}><FolderOpen size={16}/>Abrir proyecto</button><button className="button button-secondary" onClick={() => void runAction('saveProject')} disabled={disabled}><Save size={16}/>Guardar proyecto</button></div></div>
-
+    <main className="workspace" aria-label="Espacio de trabajo">
+      <div className="workspace-toolbar"><div className="project-actions" role="group" aria-label="Acciones del proyecto"><button className="button button-secondary" onClick={() => void runAction('openProject')} disabled={!!busy}><FolderOpen size={16}/>Abrir proyecto</button><button className="button button-secondary" onClick={() => void runAction('saveProject')} disabled={disabled}><Save size={16}/>Guardar proyecto</button></div></div>
 
       <div className="studio-grid">
         <aside className="codes-column">
@@ -293,7 +295,6 @@ export default function App() {
             </div>
             {codes.length > 0 && <div className="list-footer"><span><CheckCircle2 size={14}/>{duplicates ? `${duplicates} ${duplicates === 1 ? 'repetido conservado' : 'repetidos conservados'}` : 'Todos los códigos son válidos'}</span><button className="text-button muted" onClick={() => setConfirmClear(true)} title="Eliminar todos los códigos"><Trash2 size={13}/>Vaciar</button></div>}
           </section>
-          <div className="local-note"><div className="local-note-icon"><PackageCheck size={21}/></div><div><strong>Preparado para tu día a día</strong><p>PDF, impresión e imágenes.<br/>Todo desde una sola aplicación.</p></div></div>
         </aside>
 
         <section className="panel preview-panel" aria-labelledby="preview-heading"><div className="preview-heading"><div><span className="preview-title-icon"><FileText size={18}/></span><h2 id="preview-heading">Vista previa</h2><span className="live-badge"><span/>EN DIRECTO</span></div><span className="paper-type">A4 <span>210 × 297 mm</span></span></div>
@@ -301,12 +302,12 @@ export default function App() {
           <div className="preview-canvas" ref={previewRef}><div className="page-wrapper" style={{width:794*zoom,height:1123*zoom}}><div className="paper-sheet" style={{width:794,height:1123,transform:`scale(${zoom})`}}>
             {codes.length && previewHtml ? <iframe title={`Página ${page+1} del documento A4`} sandbox="" srcDoc={previewHtml} width="794" height="1123" scrolling="no"/> : <div className="empty-paper">{logo && <img src={logo} alt="PhoneGest"/>}<div className="empty-paper-content"><div className="empty-paper-barcode"><Barcode size={88} strokeWidth={1}/><span/><span/></div><h3>Tu documento empieza aquí</h3><p>Añade códigos para generar<br/>tu primera hoja de etiquetas.</p><span className="empty-paper-tag">FORMATO PHONEGEST · A4</span></div><div className="empty-paper-footer">PhoneGest Barcode Studio</div></div>}
           </div></div></div>
-          <div className="preview-footer"><div className="pagination"><button className="icon-button small" aria-label="Página anterior" disabled={page===0} onClick={() => setPage(p=>p-1)}><ChevronLeft size={16}/></button><span>Página <strong>{page+1}</strong> de <strong>{pageCount}</strong></span><button className="icon-button small" aria-label="Página siguiente" disabled={page>=pageCount-1} onClick={() => setPage(p=>p+1)}><ChevronRight size={16}/></button></div><div className="zoom-controls"><button className="text-button fit-button" onClick={() => setAutoFit(true)} title="Ajustar a la ventana">Ajustar</button><span className="toolbar-divider"/><button className="icon-button small" aria-label="Reducir zoom" disabled={zoom<=0.3} onClick={() => {setAutoFit(false);setZoom(z=>Math.max(0.3,z-0.1));}}><Minus size={14}/></button><span>{Math.round(zoom*100)}%</span><button className="icon-button small" aria-label="Ampliar zoom" disabled={zoom>=1.4} onClick={() => {setAutoFit(false);setZoom(z=>Math.min(1.4,z+0.1));}}><Plus size={14}/></button></div></div>
+          <div className="preview-footer"><div className="pagination"><button className="icon-button small" aria-label="Página anterior" disabled={page===0} onClick={() => setPage(p=>p-1)}><ChevronLeft size={16}/></button><span>Página <strong>{page+1}</strong> de <strong>{pageCount}</strong></span><button className="icon-button small" aria-label="Página siguiente" disabled={page>=pageCount-1} onClick={() => setPage(p=>p+1)}><ChevronRight size={16}/></button></div><div className="zoom-controls"><button className="text-button fit-button" onClick={() => setAutoFit(true)} title="Ajustar a la ventana">Ajustar</button><span className="toolbar-divider"/><button className="icon-button small" aria-label="Reducir zoom" disabled={zoom<=0.1} onClick={() => {setAutoFit(false);setZoom(z=>Math.max(0.1,z-0.1));}}><Minus size={14}/></button><span>{Math.round(zoom*100)}%</span><button className="icon-button small" aria-label="Ampliar zoom" disabled={zoom>=1.4} onClick={() => {setAutoFit(false);setZoom(z=>Math.min(1.4,z+0.1));}}><Plus size={14}/></button></div></div>
         </section>
       </div>
 
       <footer className="action-bar"><div className="document-summary"><span className="summary-icon"><CheckCheck size={20}/></span><div><strong>{codes.length ? `${codes.length} ${codes.length===1?'código listo':'códigos listos'} para exportar` : 'Todo listo para empezar'}</strong><span>{codes.length ? `${pageCount} ${pageCount===1?'página':'páginas'} A4` : 'Añade tus primeros códigos'}<span className="summary-dot">·</span>{saveError ? 'No se pudo guardar la sesión' : 'Guardado automático local'}</span></div></div><div className="export-actions"><button className="button button-ghost" onClick={() => void runAction('exportImages')} disabled={disabled}>{busy==='exportImages'?<LoaderCircle className="spin" size={17}/>:<ImageDown size={17}/>}<span>Exportar imágenes</span></button><button className="button button-secondary print-button" onClick={() => void runAction('print')} disabled={disabled}>{busy==='print'?<LoaderCircle className="spin" size={17}/>:<Printer size={17}/>}Imprimir</button><button className="button button-primary export-button" onClick={() => void runAction('exportPdf')} disabled={disabled}>{busy==='exportPdf'?<LoaderCircle className="spin" size={18}/>:<FileDown size={18}/>}Generar PDF<Download size={15}/></button></div></footer>
-      <div className="bottom-meta"><span>PHONEGEST BARCODE STUDIO <span>v{version}</span></span><span><ShieldCheck size={12}/>Tus códigos se procesan siempre en este equipo.</span></div>
+      <div className="bottom-meta"><span>PHONEGEST BARCODE STUDIO <span>v{currentDisplayVersion}</span></span><span><ShieldCheck size={12}/>Tus códigos se procesan siempre en este equipo.</span></div>
     </main>
 
     {notice && <div className={`toast ${notice.error?'toast-error':''}`} role={notice.error?'alert':'status'}>{notice.error?<X size={18}/>:<CheckCircle2 size={18}/>}<span>{notice.text}</span><button className="icon-button small" onClick={() => setNotice(null)} aria-label="Cerrar notificación"><X size={15}/></button></div>}

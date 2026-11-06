@@ -13,7 +13,9 @@ export interface FileResult { canceled: boolean; path?: string; count?: number; 
 export interface UpdateState {
   status: 'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'up-to-date' | 'error' | 'unsupported';
   currentVersion: string;
+  currentDisplayVersion?: string;
   availableVersion?: string;
+  availableDisplayVersion?: string;
   progress?: number;
   message?: string;
   canAutoUpdate: boolean;
@@ -21,7 +23,7 @@ export interface UpdateState {
   lastCheckedAt?: string;
 }
 export interface DesktopApi {
-  getAppInfo(): Promise<{version: string; platform: string; logoDataUrl: string}>;
+  getAppInfo(): Promise<{version: string; displayVersion?: string; platform: string; logoDataUrl: string}>;
   loadSession(): Promise<Session | null>;
   saveSession(session: Session): Promise<boolean>;
   exportPdf(project: Project): Promise<FileResult>;

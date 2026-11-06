@@ -36,6 +36,19 @@ test('updater metadata rejects wrong hashes, sizes, versions and remote or unexp
   ]) assert.throws(() => validateUpdateMetadata({ ...metadata, ...change }, expected));
 });
 
+test('display release labels do not replace the stable update version or asset paths', async () => {
+  const visible = { ...metadata, releaseName: '1.2.2b' };
+  validateUpdateMetadata(visible, { ...expected, displayVersion: '1.2.2b' });
+  assert.throws(() => validateUpdateMetadata(visible, { ...expected, displayVersion: '1.2.2c' }));
+  assert.throws(() => validateUpdateMetadata({ ...visible, version: '1.2.2b' }, { ...expected, displayVersion: '1.2.2b' }));
+  const root = new URL('../', import.meta.url);
+  const packageInfo = JSON.parse(await readFile(new URL('package.json', root), 'utf8'));
+  const buildInfo = yaml.load(await readFile(new URL('electron-builder.yml', root), 'utf8'), { schema: yaml.JSON_SCHEMA });
+  assert.match(packageInfo.displayVersion, /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)[a-z]?$/);
+  assert.equal(buildInfo.releaseInfo.releaseName, packageInfo.displayVersion, 'La etiqueta visible del paquete y del actualizador deben coincidir.');
+  validateReleaseTag(`v${packageInfo.version}`, packageInfo.version);
+});
+
 test('real release asset validation detects installer corruption and incompatible blockmaps', async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'phonegest-release-'));
   try {

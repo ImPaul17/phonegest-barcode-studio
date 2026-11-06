@@ -46,13 +46,19 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $packageVersion = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $packageInfo = Get-Content package.json -Raw | ConvertFrom-Json
+          $packageVersion = $packageInfo.version
+          $displayVersion = if ($packageInfo.displayVersion) { $packageInfo.displayVersion } else { $packageVersion }
           if ($packageVersion -notmatch '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$' -or $env:RELEASE_TAG -cne "v$packageVersion") {
             throw 'La etiqueta debe ser v + la versión estable exacta de package.json.'
+          }
+          if ($displayVersion -cnotmatch '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)[a-z]?$') {
+            throw 'La versión visible debe ser x.y.z o x.y.z seguida de una letra minúscula.'
           }
           git show-ref --verify --quiet "refs/tags/$env:RELEASE_TAG"
           if ($LASTEXITCODE -ne 0) { throw 'La etiqueta debe existir; este flujo no crea etiquetas.' }
           "RELEASE_VERSION=$packageVersion" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "RELEASE_DISPLAY_VERSION=$displayVersion" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           $existing = gh release view $env:RELEASE_TAG --json isDraft 2>$null
           if ($LASTEXITCODE -eq 0 -and -not ($existing | ConvertFrom-Json).isDraft) {
             throw 'Esta versión ya está publicada. Crea una versión nueva; no se sustituyen ejecutables publicados.'
@@ -101,7 +107,7 @@ jobs:
           if ($LASTEXITCODE -eq 0) {
             if (-not ($existing | ConvertFrom-Json).isDraft) { throw 'La versión ya está publicada; no se reemplazan sus archivos.' }
           } else {
-            gh release create $env:RELEASE_TAG --verify-tag --draft --title "PhoneGest Barcode Studio $env:RELEASE_VERSION" --generate-notes
+            gh release create $env:RELEASE_TAG --verify-tag --draft --title "PhoneGest Barcode Studio $env:RELEASE_DISPLAY_VERSION" --generate-notes
             if ($LASTEXITCODE -ne 0) { throw 'No se pudo crear el borrador de la publicación.' }
           }
           gh release upload $env:RELEASE_TAG @assets --clobber

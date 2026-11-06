@@ -85,10 +85,11 @@ if (!process.versions.electron || process.env.ELECTRON_RUN_AS_NODE) {
     const ready = new Promise((resolve) => { finish = resolve; });
     controller = createUpdateController({
       currentVersion: version,
+      currentDisplayVersion: version === packageJson.version ? packageJson.displayVersion : undefined,
       updater,
       prepareInstall: async () => { throw new Error('El smoke nunca instala actualizaciones.'); },
       onState: (state) => {
-        transitions.push({ status: state.status, availableVersion: state.availableVersion, progress: state.progress });
+        transitions.push({ status: state.status, availableVersion: state.availableVersion, availableDisplayVersion: state.availableDisplayVersion, progress: state.progress });
         if (state.status === 'error' || state.status === 'up-to-date' || state.status === 'downloaded' || (!shouldDownload && state.status === 'available')) finish(state);
       },
     });
