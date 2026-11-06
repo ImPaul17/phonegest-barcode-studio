@@ -183,5 +183,8 @@ export function createDesktopUpdateController({ app, isSmoke = false, platform =
       unsupportedReason = 'No se ha podido iniciar el servicio de actualizaciones. Puedes descargar la última versión.';
     }
   }
-  return createUpdateController({ ...options, currentVersion: app.getVersion(), updater, unsupportedReason });
+  try { return createUpdateController({ ...options, currentVersion: app.getVersion(), updater, unsupportedReason }); }
+  catch {
+    return createUpdateController({ ...options, currentVersion: app.getVersion(), unsupportedReason: 'No se ha podido iniciar el servicio de actualizaciones. Puedes descargar la última versión.' });
+  }
 }

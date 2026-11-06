@@ -62,6 +62,7 @@ jobs:
       - run: npm run build
       - run: npm test
       - run: npm run test:ui
+      - run: npm run test:updates:ui
       - name: Comprobar exportaciones de la aplicación
         run: |
           node scripts/desktop.mjs --smoke-test build/ci-smoke
