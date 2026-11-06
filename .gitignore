@@ -1,0 +1,16 @@
+node_modules/
+dist/
+release/
+reference/node_modules/
+reference/
+build/*
+!build/.gitkeep
+artifacts/
+*.tsbuildinfo
+*.log
+.env
+.env.*
+!.env.example
+*.pgbs
+*.pfx
+*.p12

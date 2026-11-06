@@ -1,0 +1,123 @@
+name: Publicar Windows
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Etiqueta estable ya existente (ej. v1.0.2)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.repository == 'ImPaul17/phonegest-barcode-studio'
+    runs-on: windows-latest
+    timeout-minutes: 40
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+      GH_REPO: ${{ github.repository }}
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      ELECTRON_BUILDER_COMPRESSION_LEVEL: '5'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Validar etiqueta y evitar reemplazar publicaciones
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $packageVersion = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          if ($packageVersion -notmatch '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$' -or $env:RELEASE_TAG -cne "v$packageVersion") {
+            throw 'La etiqueta debe ser v + la versión estable exacta de package.json.'
+          }
+          git show-ref --verify --quiet "refs/tags/$env:RELEASE_TAG"
+          if ($LASTEXITCODE -ne 0) { throw 'La etiqueta debe existir; este flujo no crea etiquetas.' }
+          "RELEASE_VERSION=$packageVersion" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          $existing = gh release view $env:RELEASE_TAG --json isDraft 2>$null
+          if ($LASTEXITCODE -eq 0 -and -not ($existing | ConvertFrom-Json).isDraft) {
+            throw 'Esta versión ya está publicada. Crea una versión nueva; no se sustituyen ejecutables publicados.'
+          }
+          $global:LASTEXITCODE = 0
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      - run: npm run test:ui
+      - name: Comprobar exportaciones de la aplicación
+        run: |
+          node scripts/desktop.mjs --smoke-test build/ci-smoke
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tests/pdf-integration.mjs build/ci-smoke
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tests/png-integration.mjs build/ci-smoke
+      - name: Crear una sola compilación del instalador y portable
+        run: npx electron-builder --win nsis portable --x64 --publish never
+      - name: Verificar paquete y metadatos del actualizador
+        run: |
+          node scripts/verify-package.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/release-validation.mjs release
+      - name: Probar el ejecutable empaquetado
+        run: |
+          Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
+          $smokeDirectory = Join-Path $env:GITHUB_WORKSPACE 'build/ci-packaged-smoke'
+          $executable = Join-Path $env:GITHUB_WORKSPACE 'release/win-unpacked/PhoneGest Barcode Studio.exe'
+          $process = Start-Process -FilePath $executable -ArgumentList @('--smoke-test', "`"$smokeDirectory`"") -WindowStyle Hidden -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw "La aplicación empaquetada falló: $($process.ExitCode)" }
+          node tests/pdf-integration.mjs $smokeDirectory
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tests/png-integration.mjs $smokeDirectory
+      - name: Publicar todos los archivos de actualización juntos
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $assets = @(
+            "release/PhoneGest-Barcode-Studio-$env:RELEASE_VERSION-Instalador.exe",
+            "release/PhoneGest-Barcode-Studio-$env:RELEASE_VERSION-Instalador.exe.blockmap",
+            'release/latest.yml',
+            "release/PhoneGest-Barcode-Studio-$env:RELEASE_VERSION-Portable.exe"
+          )
+          $existing = gh release view $env:RELEASE_TAG --json isDraft 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            if (-not ($existing | ConvertFrom-Json).isDraft) { throw 'La versión ya está publicada; no se reemplazan sus archivos.' }
+          } else {
+            gh release create $env:RELEASE_TAG --verify-tag --draft --title "PhoneGest Barcode Studio $env:RELEASE_VERSION" --generate-notes
+            if ($LASTEXITCODE -ne 0) { throw 'No se pudo crear el borrador de la publicación.' }
+          }
+          gh release upload $env:RELEASE_TAG @assets --clobber
+          if ($LASTEXITCODE -ne 0) { throw 'La subida falló. La publicación queda como borrador.' }
+          gh release edit $env:RELEASE_TAG --draft=false --latest
+          if ($LASTEXITCODE -ne 0) { throw 'No se pudo publicar la versión.' }
+      - name: Conservar comprobaciones y manifiesto de archivos
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: release-${{ env.RELEASE_TAG }}-comprobaciones
+          path: |
+            artifacts/*.png
+            build/package-verification.json
+            build/ci-packaged-smoke/smoke-result.json
+            build/ci-packaged-smoke/pdf-validation/report.json
+            build/ci-packaged-smoke/png-validation-report.json
+            release/release-validation.json
+          retention-days: 14
+          if-no-files-found: ignore

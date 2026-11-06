@@ -1,0 +1,55 @@
+appId: es.phonegest.barcode-studio
+productName: PhoneGest Barcode Studio
+asar: true
+compression: normal
+publish:
+  provider: github
+  owner: ImPaul17
+  repo: phonegest-barcode-studio
+  releaseType: release
+directories:
+  output: release
+  buildResources: build
+files:
+  - dist/**/*
+  - electron/**/*
+  - shared/**/*
+  - assets/phonegest-black.png
+  - assets/phonegest-reference.png
+  - assets/phonegest.ico
+  - package.json
+  - '!**/*.test.*'
+  - '!**/*.map'
+asarUnpack:
+  - node_modules/sharp/**/*
+  - node_modules/@img/**/*
+extraFiles:
+  - from: THIRD-PARTY-NOTICES.txt
+    to: THIRD-PARTY-NOTICES.txt
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+  icon: assets/phonegest.ico
+  executableName: PhoneGest Barcode Studio
+  signExecutable: false
+  verifyUpdateCodeSignature: false
+nsis:
+  artifactName: PhoneGest-Barcode-Studio-${version}-Instalador.${ext}
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  perMachine: false
+  allowElevation: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: PhoneGest Barcode Studio
+  runAfterFinish: false
+  language: '3082'
+  installerLanguages: [es_ES]
+  displayLanguageSelector: false
+  deleteAppDataOnUninstall: false
+portable:
+  artifactName: PhoneGest-Barcode-Studio-${version}-Portable.${ext}
+  requestExecutionLevel: user
