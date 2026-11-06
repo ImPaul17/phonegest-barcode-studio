@@ -4,7 +4,7 @@ El origen del actualizador es el repositorio público [ImPaul17/phonegest-barcod
 
 ## Preparar una versión
 
-Incrementa la versión y el lockfile juntos; revisa los avisos de terceros si cambian las dependencias distribuidas. Desde 1.0.2, por ejemplo:
+Incrementa la versión y el lockfile juntos; revisa los avisos de terceros si cambian las dependencias distribuidas. Desde 1.0.3, por ejemplo:
 
 ```powershell
 npm version patch --no-git-tag-version
@@ -20,8 +20,8 @@ npm run test:png
 Revisa y confirma los cambios, súbelos a `main` y espera al resultado de **Comprobar Windows** en Actions. Después crea una etiqueta que coincida exactamente con `package.json`:
 
 ```powershell
-git tag -a v1.0.3 -m "PhoneGest Barcode Studio 1.0.3"
-git push origin v1.0.3
+git tag -a v1.0.4 -m "PhoneGest Barcode Studio 1.0.4"
+git push origin v1.0.4
 ```
 
 El número es un ejemplo. No reutilices etiquetas ni reduzcas versiones. El flujo rechaza etiquetas sin `v`, versiones preliminares o diferencias con `package.json`.

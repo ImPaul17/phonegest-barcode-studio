@@ -1,6 +1,6 @@
 import { _electron as electron } from 'playwright';
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, readFile, readdir } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import { createRequire } from 'node:module';
@@ -15,6 +15,124 @@ const env = {...process.env,PHONEGEST_TEST_DATA:userData};
 delete env.ELECTRON_RUN_AS_NODE;
 let application;
 const errors=[];
+
+async function checkLayoutSelectors(page) {
+  const toolbar = page.getByRole('combobox',{name:'Formato del documento',exact:true});
+  const listbox = page.getByRole('listbox');
+  const modal = page.getByRole('dialog',{name:'Hazlo a tu medida'});
+  const compact = 'Compacto · 7 por página';
+  const large = 'Amplio · 2 por página';
+  const report = [];
+  const openSettings = async () => {
+    await page.getByRole('button',{name:'Configuración',exact:true}).click();
+    await page.waitForFunction(()=>document.activeElement?.getAttribute('aria-label')==='Cerrar configuración');
+  };
+  const choose = async (control, text) => {
+    await control.click();
+    await page.getByRole('option',{name:text,exact:true}).click();
+    await listbox.waitFor({state:'hidden'});
+    assert.ok((await control.textContent()).includes(text));
+  };
+  const assertPopup = async (theme, location) => {
+    await listbox.waitFor({state:'visible'});
+    assert.equal(await listbox.getByRole('option').count(),3);
+    const metrics = await listbox.evaluate(element => {
+      const rgba = color => {
+        const values = color.match(/[\d.]+/g).map(Number);
+        return [values[0],values[1],values[2],values[3] ?? 1];
+      };
+      const composite = (front,back) => front.slice(0,3).map((value,index) => value*front[3]+back[index]*(1-front[3]));
+      const luminance = color => color.map(value => value/255).map(value => value<=0.04045?value/12.92:((value+0.055)/1.055)**2.4).reduce((sum,value,index)=>sum+value*[0.2126,0.7152,0.0722][index],0);
+      const background = rgba(getComputedStyle(element).backgroundColor);
+      const rect = element.getBoundingClientRect();
+      const options = [...element.querySelectorAll('[role="option"]')].map(option => {
+        const style = getComputedStyle(option);
+        const optionBackground = composite(rgba(style.backgroundColor),background);
+        const foreground = composite(rgba(style.color),optionBackground);
+        const [light,dark] = [luminance(foreground),luminance(optionBackground)].sort((a,b)=>b-a);
+        const optionRect = option.getBoundingClientRect();
+        const hit = document.elementFromPoint(optionRect.x+optionRect.width/2,optionRect.y+optionRect.height/2);
+        return {text:option.textContent,contrast:(light+0.05)/(dark+0.05),visible:option.contains(hit)};
+      });
+      return {background,options,rect:{left:rect.left,top:rect.top,right:rect.right,bottom:rect.bottom},viewport:{width:innerWidth,height:innerHeight}};
+    });
+    assert.equal(metrics.background[3],1,`${theme}/${location}: opaque menu background`);
+    assert.ok(metrics.rect.left>=0&&metrics.rect.top>=0&&metrics.rect.right<=metrics.viewport.width&&metrics.rect.bottom<=metrics.viewport.height,`${theme}/${location}: popup fits viewport`);
+    for(const option of metrics.options){
+      assert.ok(option.contrast>=4.5,`${theme}/${location}/${option.text}: text contrast ${option.contrast.toFixed(2)}`);
+      assert.ok(option.visible,`${theme}/${location}/${option.text}: popup is not clipped or covered`);
+    }
+    report.push({theme,location,...metrics});
+    return metrics;
+  };
+  for(const theme of ['light','dark']) {
+    if(await page.locator('html').getAttribute('data-theme')!==theme)await page.getByRole('button',{name:theme==='dark'?'Cambiar a modo oscuro':'Cambiar a modo claro',exact:true}).click();
+    await toolbar.click();
+    await assertPopup(theme,'toolbar');
+    await page.getByRole('option',{name:compact,exact:true}).hover();
+    await assertPopup(theme,'toolbar-hover');
+    await page.screenshot({path:path.join(output,`phonegest-selector-toolbar-${theme}.png`)});
+    await toolbar.press('Escape');
+    await listbox.waitFor({state:'hidden'});
+    await openSettings();
+    const settings = modal.getByRole('combobox',{name:'Distribución',exact:true});
+    await settings.click();
+    await assertPopup(theme,'settings');
+    await page.screenshot({path:path.join(output,`phonegest-selector-settings-${theme}.png`)});
+    assert.equal(await settings.getAttribute('aria-expanded'),'true','Settings dropdown stays open until Escape');
+    await settings.press('Escape');
+    await listbox.waitFor({state:'hidden'});
+    assert.equal(await modal.isVisible(),true,'First Escape closes only the dropdown');
+    await settings.press('Escape');
+    await modal.waitFor({state:'hidden'});
+  }
+  await choose(toolbar,compact);
+  await page.getByText('Página 1 de 1',{exact:true}).waitFor();
+  await openSettings();
+  const settings = modal.getByRole('combobox',{name:'Distribución',exact:true});
+  assert.match(await settings.textContent(),/Compacto/);
+  await choose(settings,large);
+  assert.match(await toolbar.textContent(),/Amplio/);
+  await settings.click();
+  await modal.getByRole('heading',{name:'Hazlo a tu medida',exact:true}).click();
+  await listbox.waitFor({state:'hidden'});
+  assert.equal(await modal.isVisible(),true,'Outside popup click keeps settings open');
+  await page.getByRole('button',{name:'Listo',exact:true}).click();
+  await page.getByText('Página 1 de 3',{exact:true}).waitFor();
+  await toolbar.click();
+  await toolbar.press('Home');
+  await toolbar.press('Enter');
+  await page.getByText('Página 1 de 2',{exact:true}).waitFor();
+  await toolbar.click();
+  await toolbar.press('ArrowDown');
+  await toolbar.press('Enter');
+  await page.getByText('Página 1 de 1',{exact:true}).waitFor();
+  await toolbar.click();
+  await toolbar.press('ArrowUp');
+  await toolbar.press('Enter');
+  await page.getByText('Página 1 de 2',{exact:true}).waitFor();
+  await toolbar.click();
+  await toolbar.press('End');
+  await toolbar.press('Enter');
+  await page.getByText('Página 1 de 3',{exact:true}).waitFor();
+  await toolbar.click();
+  await toolbar.press('p');
+  await toolbar.press('Enter');
+  await page.getByText('Página 1 de 2',{exact:true}).waitFor();
+  await toolbar.focus();
+  await toolbar.press('Space');
+  await listbox.waitFor({state:'visible'});
+  await toolbar.press('Tab');
+  await listbox.waitFor({state:'hidden'});
+  assert.equal(await toolbar.evaluate(element=>document.activeElement===element),false,'Tab moves focus out of the selector');
+  await toolbar.click();
+  await page.getByRole('heading',{name:'Vista previa',exact:true}).click();
+  await listbox.waitFor({state:'hidden'});
+  if(await page.locator('html').getAttribute('data-theme')!=='light')await page.getByRole('button',{name:'Cambiar a modo claro',exact:true}).click();
+  assert.match(await toolbar.textContent(),/PhoneGest/);
+  await writeFile(path.join(output,'phonegest-selectors-report.json'),JSON.stringify({success:true,checks:['light/dark normal and hover contrast','viewport and modal popup visibility','click selection and pagination','toolbar/settings synchronization','ArrowUp/ArrowDown/Home/End/Enter','typeahead','Space and Tab','outside click','Escape closes menu before modal'],popups:report},null,2));
+}
+
 try {
   application = await electron.launch({executablePath:require('electron'),args:[path.join(root,'scripts','ui-harness.mjs')],env,timeout:45000});
   const page = await application.firstWindow();
@@ -60,6 +178,7 @@ try {
   await page.getByRole('button',{name:'Página anterior'}).click();
   await page.getByText('Página 1 de 2',{exact:true}).waitFor();
   assert.equal(await frame.locator('.page[style]').count(),0);
+  await checkLayoutSelectors(page);
   await page.getByRole('button',{name:'Configuración',exact:true}).click();
   await page.getByRole('checkbox',{name:'Casillas para paquetes',exact:true}).uncheck();
   await page.getByRole('checkbox',{name:'Numerar los códigos',exact:true}).uncheck();
@@ -79,7 +198,8 @@ try {
   assert.equal(await page.locator('.code-row').count(),4);
   await page.getByRole('button',{name:'Deshacer último cambio',exact:true}).click();
   assert.equal(await page.locator('.code-row').count(),5);
-  await page.getByRole('combobox',{name:'Formato del documento'}).selectOption('compact');
+  await page.getByRole('combobox',{name:'Formato del documento'}).click();
+  await page.getByRole('option',{name:'Compacto · 7 por página',exact:true}).click();
   await page.getByText('Página 1 de 1',{exact:true}).waitFor();
   await input.fill('BORRADOR-LOCAL');
   await page.waitForTimeout(800);
@@ -102,5 +222,5 @@ try {
   await page.getByText('Todavía no hay códigos',{exact:true}).waitFor();
   assert.equal(await page.getByRole('button',{name:'Generar PDF'}).isDisabled(),true);
   assert.deepEqual(errors,[]);
-  console.log(JSON.stringify({success:true,checks:['paste and add','live vector preview','light and dark theme','PDF export via IPC','project save and open via IPC','branded PNG export via IPC','invalid input retained','multi-page navigation','checkbox and number toggles','edit','reorder','delete and undo','format switch','session restoration','local draft','network denied','clear confirmation'],screenshots:output},null,2));
+  console.log(JSON.stringify({success:true,checks:['paste and add','live vector preview','light and dark theme','PDF export via IPC','project save and open via IPC','branded PNG export via IPC','invalid input retained','multi-page navigation','themed selector contrast and popup visibility','selector click, keyboard, focus and modal dismissal','toolbar/settings layout synchronization','checkbox and number toggles','edit','reorder','delete and undo','format switch','session restoration','local draft','network denied','clear confirmation'],screenshots:output},null,2));
 } finally {await application?.close();}

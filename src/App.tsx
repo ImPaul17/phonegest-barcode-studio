@@ -1,13 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, ArrowUpRight, Barcode, Check, CheckCheck, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, ClipboardPaste, Download, FileDown, FilePlus2, FileText, FolderOpen, GripVertical, ImageDown, ListOrdered, LoaderCircle, Minus, Moon, PackageCheck, Pencil, Plus, Printer, RefreshCw, RotateCcw, Save, ScanLine, Settings2, ShieldCheck, Sun, Trash2, X, ZoomIn } from 'lucide-react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { ArrowDown, ArrowUp, ArrowUpRight, Barcode, Check, CheckCheck, CheckCircle2, ChevronLeft, ChevronRight, ClipboardPaste, Download, FileDown, FilePlus2, FileText, FolderOpen, GripVertical, ImageDown, ListOrdered, LoaderCircle, Minus, Moon, PackageCheck, Pencil, Plus, Printer, RefreshCw, RotateCcw, Save, ScanLine, Settings2, ShieldCheck, Sun, Trash2, X, ZoomIn } from 'lucide-react';
 import { parseCodes, renderDocument, validateCode, normalizeSettings } from '../shared/index.mjs';
 import type { Project, Session, Settings, Theme, UpdateState } from './types';
+import Select from './components/Select';
 
 const INITIAL_SETTINGS: Settings = { layout: 'comfortable', startNumber: 1, showNumbers: true, showCheckboxes: true, showText: true, documentTitle: '' };
 const EXAMPLES = ['L3A5KA9806994060129590B', 'L3A5KA9806994140129590X', 'L3A5KA9807022320129590Q'];
 const ROWS = { comfortable: 4, compact: 7, large: 2 };
 const MAX_CODES = 1000;
 const layoutNames = { comfortable: 'PhoneGest · 4 por página', compact: 'Compacto · 7 por página', large: 'Amplio · 2 por página' };
+const layoutOptions = Object.entries(layoutNames).map(([value, label]) => ({ value: value as Settings['layout'], label }));
 const desktop = window.phonegest;
 
 export default function App() {
@@ -182,19 +184,18 @@ export default function App() {
     addEventListener('keydown', handler); return () => removeEventListener('keydown', handler);
   }, [runAction, undoLast]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!(settingsOpen || editing !== null || confirmClear)) return;
     const previous = document.activeElement as HTMLElement | null;
-    const timer = setTimeout(() => {
-      if (settingsOpen && focusUpdates.current && updatesSectionRef.current) {
-        focusUpdates.current = false;
-        updatesSectionRef.current.focus({ preventScroll: true });
-        updatesSectionRef.current.scrollIntoView({ block: 'nearest' });
-      } else {
-        document.querySelector<HTMLElement>('.modal input, .modal select, .modal button')?.focus();
-      }
-    }, 30);
+    if (settingsOpen && focusUpdates.current && updatesSectionRef.current) {
+      focusUpdates.current = false;
+      updatesSectionRef.current.focus({ preventScroll: true });
+      updatesSectionRef.current.scrollIntoView({ block: 'nearest' });
+    } else {
+      document.querySelector<HTMLElement>('.modal input, .modal select, .modal button')?.focus();
+    }
     const handleModal = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
       if (event.key === 'Escape') {setSettingsOpen(false);setEditing(null);setConfirmClear(false);}
       if (event.key !== 'Tab') return;
       const elements = [...document.querySelectorAll<HTMLElement>('.modal button:not(:disabled), .modal input, .modal select')];
@@ -203,7 +204,7 @@ export default function App() {
       if (event.shiftKey && document.activeElement === first) {event.preventDefault();last?.focus();}
       else if (!event.shiftKey && document.activeElement === last) {event.preventDefault();first?.focus();}
     };
-    addEventListener('keydown',handleModal); return () => {clearTimeout(timer);removeEventListener('keydown',handleModal);previous?.focus();};
+    addEventListener('keydown',handleModal); return () => {removeEventListener('keydown',handleModal);previous?.focus();};
   }, [settingsOpen, editing, confirmClear]);
 
   const previewHtml = useMemo(() => {
@@ -279,7 +280,7 @@ export default function App() {
         </aside>
 
         <section className="panel preview-panel" aria-labelledby="preview-heading"><div className="preview-heading"><div><span className="preview-title-icon"><FileText size={18}/></span><h2 id="preview-heading">Vista previa</h2><span className="live-badge"><span/>EN DIRECTO</span></div><span className="paper-type">A4 <span>210 × 297 mm</span></span></div>
-          <div className="preview-toolbar"><label className="layout-select"><ListOrdered size={15}/><select value={settings.layout} onChange={event => changeSetting('layout',event.target.value as Settings['layout'])} aria-label="Formato del documento">{Object.entries(layoutNames).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select><ChevronDown size={13}/></label><span className="toolbar-divider"/><label className="toolbar-check"><input type="checkbox" checked={settings.showNumbers} onChange={event => changeSetting('showNumbers',event.target.checked)}/>Numeración</label><label className="toolbar-check"><input type="checkbox" checked={settings.showCheckboxes} onChange={event => changeSetting('showCheckboxes',event.target.checked)}/>Casillas</label><button className="icon-button small format-settings" title="Más opciones de formato" aria-label="Más opciones de formato" onClick={() => setSettingsOpen(true)}><Settings2 size={16}/></button></div>
+          <div className="preview-toolbar"><div className="layout-select"><ListOrdered size={15}/><Select value={settings.layout} options={layoutOptions} onChange={value => changeSetting('layout', value)} ariaLabel="Formato del documento" variant="toolbar"/></div><span className="toolbar-divider"/><label className="toolbar-check"><input type="checkbox" checked={settings.showNumbers} onChange={event => changeSetting('showNumbers',event.target.checked)}/>Numeración</label><label className="toolbar-check"><input type="checkbox" checked={settings.showCheckboxes} onChange={event => changeSetting('showCheckboxes',event.target.checked)}/>Casillas</label><button className="icon-button small format-settings" title="Más opciones de formato" aria-label="Más opciones de formato" onClick={() => setSettingsOpen(true)}><Settings2 size={16}/></button></div>
           <div className="preview-canvas" ref={previewRef}><div className="page-wrapper" style={{width:794*zoom,height:1123*zoom}}><div className="paper-sheet" style={{width:794,height:1123,transform:`scale(${zoom})`}}>
             {codes.length && previewHtml ? <iframe title={`Página ${page+1} del documento A4`} sandbox="" srcDoc={previewHtml} width="794" height="1123" scrolling="no"/> : <div className="empty-paper">{logo && <img src={logo} alt="PhoneGest"/>}<div className="empty-paper-content"><div className="empty-paper-barcode"><Barcode size={88} strokeWidth={1}/><span/><span/></div><h3>Tu documento empieza aquí</h3><p>Añade códigos para generar<br/>tu primera hoja de etiquetas.</p><span className="empty-paper-tag">FORMATO PHONEGEST · A4</span></div><div className="empty-paper-footer">PhoneGest Barcode Studio</div></div>}
           </div></div></div>
@@ -293,7 +294,7 @@ export default function App() {
 
     {notice && <div className={`toast ${notice.error?'toast-error':''}`} role={notice.error?'alert':'status'}>{notice.error?<X size={18}/>:<CheckCircle2 size={18}/>}<span>{notice.text}</span><button className="icon-button small" onClick={() => setNotice(null)} aria-label="Cerrar notificación"><X size={15}/></button></div>}
 
-    {settingsOpen && <div className="modal-overlay" onMouseDown={event=>{if(event.target===event.currentTarget)setSettingsOpen(false);}}><section className="modal settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title"><div className="modal-heading"><div className="heading-icon blue"><Settings2 size={20}/></div><div><h2 id="settings-title">Hazlo a tu medida</h2><p>Los cambios se aplican al instante.</p></div><button className="icon-button" onClick={()=>setSettingsOpen(false)} aria-label="Cerrar configuración"><X size={20}/></button></div><div className="modal-content"><label className="form-label">Título del documento <span>Opcional</span><input value={settings.documentTitle} maxLength={120} placeholder="Ej. Envío almacén · Noviembre" onChange={event=>changeSetting('documentTitle',event.target.value)}/></label><label className="form-label">Distribución<select value={settings.layout} onChange={event=>changeSetting('layout',event.target.value as Settings['layout'])}>{Object.entries(layoutNames).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label><div className="setting-row"><div><strong>Numerar los códigos</strong><p>Numeración continua en todo el documento.</p></div><input className="switch" type="checkbox" aria-label="Numerar los códigos" checked={settings.showNumbers} onChange={event=>changeSetting('showNumbers',event.target.checked)}/></div><label className="form-label inline-label">Empezar por el número<input type="number" min={1} max={999999} value={settings.startNumber} onChange={event=>changeSetting('startNumber',Math.min(999999,Math.max(1,Number(event.target.value)||1)))}/></label><div className="setting-row"><div><strong>Casillas para paquetes</strong><p>Una casilla junto a cada código.</p></div><input className="switch" type="checkbox" aria-label="Casillas para paquetes" checked={settings.showCheckboxes} onChange={event=>changeSetting('showCheckboxes',event.target.checked)}/></div><div className="setting-row"><div><strong>Mostrar identificadores</strong><p>Texto legible debajo del código de barras.</p></div><input className="switch" type="checkbox" aria-label="Mostrar identificadores" checked={settings.showText} onChange={event=>changeSetting('showText',event.target.checked)}/></div><div className="theme-setting"><span className="form-label">Apariencia</span><div className="theme-options">{(['light','dark','system'] as Theme[]).map((value)=><button key={value} className={theme===value?'selected':''} onClick={()=>setTheme(value)}>{value==='light'?<Sun size={16}/>:value==='dark'?<Moon size={16}/>:<Settings2 size={16}/>}{{light:'Claro',dark:'Oscuro',system:'Sistema'}[value]}</button>)}</div></div>{updatePanel}</div><div className="modal-footer"><span><ShieldCheck size={13}/>Se guarda en este equipo</span><button className="button button-primary" onClick={()=>setSettingsOpen(false)}><Check size={16}/>Listo</button></div></section></div>}
+    {settingsOpen && <div className="modal-overlay" onMouseDown={event=>{if(event.target===event.currentTarget)setSettingsOpen(false);}}><section className="modal settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title"><div className="modal-heading"><div className="heading-icon blue"><Settings2 size={20}/></div><div><h2 id="settings-title">Hazlo a tu medida</h2><p>Los cambios se aplican al instante.</p></div><button className="icon-button" onClick={()=>setSettingsOpen(false)} aria-label="Cerrar configuración"><X size={20}/></button></div><div className="modal-content"><label className="form-label">Título del documento <span>Opcional</span><input value={settings.documentTitle} maxLength={120} placeholder="Ej. Envío almacén · Noviembre" onChange={event=>changeSetting('documentTitle',event.target.value)}/></label><div className="form-label"><label htmlFor="settings-layout">Distribución</label><Select id="settings-layout" value={settings.layout} options={layoutOptions} onChange={value => changeSetting('layout', value)} ariaLabel="Distribución"/></div><div className="setting-row"><div><strong>Numerar los códigos</strong><p>Numeración continua en todo el documento.</p></div><input className="switch" type="checkbox" aria-label="Numerar los códigos" checked={settings.showNumbers} onChange={event=>changeSetting('showNumbers',event.target.checked)}/></div><label className="form-label inline-label">Empezar por el número<input type="number" min={1} max={999999} value={settings.startNumber} onChange={event=>changeSetting('startNumber',Math.min(999999,Math.max(1,Number(event.target.value)||1)))}/></label><div className="setting-row"><div><strong>Casillas para paquetes</strong><p>Una casilla junto a cada código.</p></div><input className="switch" type="checkbox" aria-label="Casillas para paquetes" checked={settings.showCheckboxes} onChange={event=>changeSetting('showCheckboxes',event.target.checked)}/></div><div className="setting-row"><div><strong>Mostrar identificadores</strong><p>Texto legible debajo del código de barras.</p></div><input className="switch" type="checkbox" aria-label="Mostrar identificadores" checked={settings.showText} onChange={event=>changeSetting('showText',event.target.checked)}/></div><div className="theme-setting"><span className="form-label">Apariencia</span><div className="theme-options">{(['light','dark','system'] as Theme[]).map((value)=><button key={value} className={theme===value?'selected':''} onClick={()=>setTheme(value)}>{value==='light'?<Sun size={16}/>:value==='dark'?<Moon size={16}/>:<Settings2 size={16}/>}{{light:'Claro',dark:'Oscuro',system:'Sistema'}[value]}</button>)}</div></div>{updatePanel}</div><div className="modal-footer"><span><ShieldCheck size={13}/>Se guarda en este equipo</span><button className="button button-primary" onClick={()=>setSettingsOpen(false)}><Check size={16}/>Listo</button></div></section></div>}
 
     {editing!==null && <div className="modal-overlay"><section className="modal edit-modal" role="dialog" aria-modal="true" aria-labelledby="edit-title"><div className="modal-heading"><div className="heading-icon blue"><Pencil size={19}/></div><div><h2 id="edit-title">Editar código {editing+1}</h2><p>El código de barras se actualizará al guardar.</p></div><button className="icon-button" onClick={()=>setEditing(null)} aria-label="Cerrar edición"><X size={20}/></button></div><div className="modal-content"><label className="form-label">Identificador<input autoFocus className="code-edit-input" value={editValue} onChange={event=>{setEditValue(event.target.value);setEditError('');}} onKeyDown={event=>{if(event.key==='Enter')saveEdit();}} spellCheck={false}/></label>{editError&&<p role="alert" className="field-error">{editError}</p>}</div><div className="modal-footer"><button className="button button-secondary" onClick={()=>setEditing(null)}>Cancelar</button><button className="button button-primary" onClick={saveEdit}><Check size={16}/>Guardar cambio</button></div></section></div>}
 
