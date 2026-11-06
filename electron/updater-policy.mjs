@@ -13,6 +13,10 @@ export function isAllowedUpdateUrl(value) {
     const pathname = url.pathname.toLowerCase();
     if (url.hostname === 'github.com') {
       if (pathname === `${RELEASE_PATH}.atom` || pathname === `${RELEASE_PATH}/latest`) return true;
+      // GitHub resolves /releases/latest to its stable tag even with JSON Accept.
+      if (pathname.startsWith(`${RELEASE_PATH}/tag/`)) {
+        return /^v?(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/.test(url.pathname.slice(`${RELEASE_PATH}/tag/`.length));
+      }
       if (!pathname.startsWith(`${RELEASE_PATH}/download/`)) return false;
       const [tag, filename, extra] = url.pathname.slice(`${RELEASE_PATH}/download/`.length).split('/');
       return !extra && /^v?\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(tag)

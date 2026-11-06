@@ -4,13 +4,14 @@ El origen del actualizador es el repositorio público [ImPaul17/phonegest-barcod
 
 ## Preparar una versión
 
-Incrementa la versión y el lockfile juntos; revisa los avisos de terceros si cambian las dependencias distribuidas. Desde 1.0.1, por ejemplo:
+Incrementa la versión y el lockfile juntos; revisa los avisos de terceros si cambian las dependencias distribuidas. Desde 1.0.2, por ejemplo:
 
 ```powershell
 npm version patch --no-git-tag-version
 npm run build
 npm test
 npm run test:ui
+npm run test:updates:ui
 npm run smoke
 npm run test:pdf
 npm run test:png
@@ -19,8 +20,8 @@ npm run test:png
 Revisa y confirma los cambios, súbelos a `main` y espera al resultado de **Comprobar Windows** en Actions. Después crea una etiqueta que coincida exactamente con `package.json`:
 
 ```powershell
-git tag -a v1.0.2 -m "PhoneGest Barcode Studio 1.0.2"
-git push origin v1.0.2
+git tag -a v1.0.3 -m "PhoneGest Barcode Studio 1.0.3"
+git push origin v1.0.3
 ```
 
 El número es un ejemplo. No reutilices etiquetas ni reduzcas versiones. El flujo rechaza etiquetas sin `v`, versiones preliminares o diferencias con `package.json`.
@@ -48,7 +49,7 @@ No subas PDF originales, proyectos `.pgbs`, sesiones, códigos de clientes ni ca
 
 ## Actualizador y distribución
 
-La edición instalada 1.0.1 o posterior consulta las versiones estables y descarga las nuevas en segundo plano. Espera a **Reiniciar e instalar** y guarda antes la sesión. No usa versiones preliminares ni permite bajar de versión. La portable abre las descargas para cambiar de ejecutable manualmente.
+La edición instalada 1.0.2 o posterior consulta las versiones estables y descarga las nuevas en segundo plano. Espera a **Reiniciar e instalar** y guarda antes la sesión. No usa versiones preliminares ni permite bajar de versión. La portable abre las descargas para cambiar de ejecutable manualmente. La 1.0.1 bloqueaba un redireccionamiento necesario de GitHub y debe sustituirse manualmente por la 1.0.2 o posterior.
 
 La red del actualizador está separada de la interfaz y limitada a las rutas del repositorio y a la infraestructura de archivos de GitHub. No recibe datos de documentos. No amplíes sus reglas a destinos arbitrarios ni añadas credenciales al programa.
 

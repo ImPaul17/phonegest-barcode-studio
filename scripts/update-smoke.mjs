@@ -32,13 +32,16 @@ if (!process.versions.electron || process.env.ELECTRON_RUN_AS_NODE) {
   const audit = [];
   const privacyViolations = [];
   const transitions = [];
+  const errors = [];
   let controller;
   let timeout;
   let downloadedInfo;
   app.setName('PhoneGest Update Smoke');
   app.setPath('userData', path.join(app.getPath('temp'), `phonegest-update-smoke-${process.pid}`));
+  const startupTimeout = setTimeout(() => { console.error('Electron no se ha iniciado en 30 segundos.'); app.exit(1); }, 30000);
 
-  await app.whenReady();
+  void app.whenReady().then(async () => {
+  clearTimeout(startupTimeout);
   try {
     assert.match(version, /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/);
     await mkdir(output, { recursive: true });
@@ -67,12 +70,17 @@ if (!process.versions.electron || process.env.ELECTRON_RUN_AS_NODE) {
       const url = new URL(details.url);
       audit.push({ host: url.hostname, path: url.pathname, method: details.method, status: details.statusCode, allowed: isAllowedUpdateUrl(details.url) });
     });
+    updateSession.webRequest.onErrorOccurred({ urls: ['<all_urls>'] }, (details) => {
+      const url = new URL(details.url);
+      audit.push({ host: url.hostname, path: url.pathname, method: details.method, error: details.error, allowed: isAllowedUpdateUrl(details.url) });
+    });
     updateSession.webRequest.onSendHeaders({ urls: ['<all_urls>'] }, (details) => {
       for (const name of Object.keys(details.requestHeaders)) {
         if (/^(?:authorization|proxy-authorization|cookie|origin|referer|x-user-staging-id|x-github-token|x-auth-token|private-token)$/i.test(name)) privacyViolations.push(name);
       }
     });
     updater.on('update-downloaded', (info) => { downloadedInfo = info; });
+    updater.on('error', (error) => errors.push({ code: error.code, message: String(error.message).split('\n')[0].replace(/https?:\/\/[^\s)]+/g, (value) => { try { const url = new URL(value); return `${url.origin}${url.pathname}`; } catch { return '[URL]'; } }).slice(0, 400) }));
     let finish;
     const ready = new Promise((resolve) => { finish = resolve; });
     controller = createUpdateController({
@@ -116,8 +124,9 @@ if (!process.versions.electron || process.env.ELECTRON_RUN_AS_NODE) {
     clearTimeout(timeout);
     controller?.dispose();
     await mkdir(output, { recursive: true });
-    await writeFile(path.join(output, 'update-smoke-result.json'), JSON.stringify({ success: false, message: error.message, transitions, requests: audit, privacyViolations, installed: false }, null, 2));
+    await writeFile(path.join(output, 'update-smoke-result.json'), JSON.stringify({ success: false, message: error.message, transitions, errors, requests: audit, privacyViolations, installed: false }, null, 2));
     console.error(error.message);
     app.exit(1);
   }
+  });
 }

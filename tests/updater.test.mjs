@@ -20,6 +20,8 @@ test('update policy permits only this public repository and its release CDN redi
   for (const url of [
     `${UPDATE_RELEASE_URL}`,
     'https://github.com/ImPaul17/phonegest-barcode-studio/releases.atom',
+    'https://github.com/ImPaul17/phonegest-barcode-studio/releases/tag/v1.0.1',
+    'https://github.com/ImPaul17/phonegest-barcode-studio/releases/tag/1.0.2',
     'https://github.com/ImPaul17/phonegest-barcode-studio/releases/download/v1.0.2/latest.yml',
     'https://github.com/ImPaul17/phonegest-barcode-studio/releases/download/v1.0.2/PhoneGest-Barcode-Studio-1.0.2-Instalador.exe',
     'https://api.github.com/repos/ImPaul17/phonegest-barcode-studio/releases/latest',
@@ -29,6 +31,11 @@ test('update policy permits only this public repository and its release CDN redi
   for (const url of [
     'http://github.com/ImPaul17/phonegest-barcode-studio/releases/latest',
     'https://github.com/another/project/releases/latest',
+    'https://github.com/another/project/releases/tag/v1.0.1',
+    'https://github.com/ImPaul17/phonegest-barcode-studio/releases/tag/feature',
+    'https://github.com/ImPaul17/phonegest-barcode-studio/releases/tag/v1.0.2-beta.1',
+    'https://github.com/ImPaul17/phonegest-barcode-studio/releases/tag/v01.0.1',
+    'https://github.com/ImPaul17/phonegest-barcode-studio/releases/tag/v1.0.1/other',
     'https://github.com/ImPaul17/phonegest-barcode-studio/issues',
     'https://github.com/ImPaul17/phonegest-barcode-studio/releases/download/v1.0.2/other.exe',
     'https://github.com:8443/ImPaul17/phonegest-barcode-studio/releases/latest',
