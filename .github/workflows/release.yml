@@ -107,7 +107,7 @@ jobs:
           if ($LASTEXITCODE -eq 0) {
             if (-not ($existing | ConvertFrom-Json).isDraft) { throw 'La versión ya está publicada; no se reemplazan sus archivos.' }
           } else {
-            gh release create $env:RELEASE_TAG --verify-tag --draft --title "PhoneGest Barcode Studio $env:RELEASE_DISPLAY_VERSION" --generate-notes
+            gh release create $env:RELEASE_TAG --verify-tag --draft --title "v$env:RELEASE_DISPLAY_VERSION PhoneGest Barcode Studio" --generate-notes
             if ($LASTEXITCODE -ne 0) { throw 'No se pudo crear el borrador de la publicación.' }
           }
           gh release upload $env:RELEASE_TAG @assets --clobber

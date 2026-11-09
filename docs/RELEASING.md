@@ -30,7 +30,7 @@ git tag -a v1.0.6 -m "PhoneGest Barcode Studio 1.0.4c (interna 1.0.6)"
 git push origin v1.0.6
 ```
 
-El número es un ejemplo. No reutilices etiquetas ni reduzcas versiones internas. El flujo rechaza etiquetas sin `v`, versiones preliminares o diferencias con `package.json.version`. No uses `v1.0.4b` como etiqueta: los clientes anteriores requieren una etiqueta SemVer estable. El título público de la Release sí utiliza **PhoneGest Barcode Studio 1.0.4b**.
+El número es un ejemplo. No reutilices etiquetas ni reduzcas versiones internas. El flujo rechaza etiquetas sin `v`, versiones preliminares o diferencias con `package.json.version`. No uses `v1.0.4b` como etiqueta: los clientes anteriores requieren una etiqueta SemVer estable. El título público de la Release utiliza **v1.0.4b PhoneGest Barcode Studio**.
 
 ## Flujo de publicación
 
