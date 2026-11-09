@@ -15,7 +15,7 @@ Descarga los ejecutables desde [GitHub Releases](https://github.com/ImPaul17/pho
 
 El número de versión del nombre cambia en cada publicación. Ambas variantes trabajan offline y guardan la sesión en el perfil del usuario de Windows. La edición portable también utiliza ese perfil; los datos de trabajo no viajan dentro del ejecutable.
 
-La versión visible actual es **1.0.4b**. Las mejoras pequeñas pueden identificarse con letras; el instalador, la etiqueta de GitHub y el actualizador mantienen una versión numérica interna creciente, **1.0.5** en esta publicación. Al actualizar desde 1.0.4 puede aparecer primero ese número; tras instalar, la aplicación muestra **1.0.4b**.
+La versión visible actual y su tag pública son **1.0.4b** / **`v1.0.4b`**. Las mejoras pequeñas siguen con **1.0.4c**, **1.0.4d**, etc., sin cambiar la base **1.0.4**. El instalador y el actualizador mantienen un número interno creciente, **1.0.5** en esta publicación, y la referencia técnica **`v1.0.5`** para que los clientes ya instalados puedan actualizar. Al actualizar desde 1.0.4 puede aparecer primero ese número; tras instalar, la aplicación muestra **1.0.4b**.
 
 Los ejecutables actuales no tienen certificado de firma digital. Windows puede identificar al editor como desconocido. Utiliza los archivos del repositorio de PhoneGest enlazado arriba.
 
@@ -133,7 +133,7 @@ La configuración de empaquetado está en `electron-builder.yml`. `shared/` cont
 
 ## Publicar una versión
 
-Los cambios de `main` pasan comprobaciones en Windows. Una etiqueta estable **`vX.Y.Z`**, que coincida con `package.json`, ejecuta el flujo de publicación y sube juntos el instalador, su `.blockmap`, `latest.yml` y el portable a GitHub Releases. No se publican documentos de trabajo.
+Los cambios de `main` pasan comprobaciones en Windows. Una etiqueta técnica estable **`vX.Y.Z`**, que coincida con `package.json.version`, ejecuta el flujo de publicación y sube juntos el instalador, su `.blockmap`, `latest.yml` y el portable a GitHub Releases. Al terminar se crea automáticamente la tag pública de `displayVersion`, por ejemplo **`v1.0.4c`**, en el mismo commit. No se publican documentos de trabajo.
 
 Consulta [docs/RELEASING.md](docs/RELEASING.md) para preparar una versión y recuperar una publicación interrumpida. No reemplaces archivos de una versión publicada: incrementa la versión para mantener coherentes los clientes que ya la descargaron.
 

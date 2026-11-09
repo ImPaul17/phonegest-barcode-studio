@@ -4,7 +4,9 @@ El origen del actualizador es el repositorio público [ImPaul17/phonegest-barcod
 
 ## Preparar una versión
 
-La versión de la app se muestra mediante `package.json.displayVersion` (por ejemplo, **1.0.4b**). `package.json.version`, el lockfile, la etiqueta y los ejecutables conservan SemVer numérico estable (actualmente **1.0.5**) para que los equipos con versiones anteriores puedan actualizar. Cada publicación necesita un número interno superior, también al pasar de **1.0.4b** a **1.0.4c**.
+La versión pública se define en `package.json.displayVersion`: **1.0.4b**, **1.0.4c**, **1.0.4d**, etc. Las mejoras pequeñas mantienen la base **1.0.4** y avanzan la letra minúscula. Cada versión tiene una tag pública equivalente, como **`v1.0.4b`**, creada automáticamente al terminar la publicación.
+
+`package.json.version`, el lockfile y los ejecutables conservan SemVer numérico estable (actualmente **1.0.5**). La Release mantiene la referencia técnica **`v1.0.5`**, necesaria para los actualizadores ya instalados, y ambas tags apuntan al mismo commit. Cada publicación necesita un número interno superior, también al pasar de **1.0.4b** a **1.0.4c**; esto no cambia la versión pública base.
 
 Incrementa la versión interna y el lockfile juntos, actualiza la etiqueta visible y los avisos. Desde 1.0.4b / interna 1.0.5, por ejemplo:
 
@@ -30,7 +32,9 @@ git tag -a v1.0.6 -m "PhoneGest Barcode Studio 1.0.4c (interna 1.0.6)"
 git push origin v1.0.6
 ```
 
-El número es un ejemplo. No reutilices etiquetas ni reduzcas versiones internas. El flujo rechaza etiquetas sin `v`, versiones preliminares o diferencias con `package.json.version`. No uses `v1.0.4b` como etiqueta: los clientes anteriores requieren una etiqueta SemVer estable. El título público de la Release utiliza **v1.0.4b PhoneGest Barcode Studio**.
+El número es un ejemplo. No reutilices etiquetas ni reduzcas versiones internas. El flujo rechaza etiquetas técnicas sin `v`, versiones preliminares o diferencias con `package.json.version`. No subas manualmente la tag con letra: al publicarse `v1.0.6`, el flujo crea automáticamente **`v1.0.4c`** en el mismo commit. El título público de la Release utiliza **v1.0.4c PhoneGest Barcode Studio**.
+
+Conserva la tag numérica y la Release asociada: los clientes anteriores bloquean las rutas de actualización con letras. La tag pública identifica la revisión y permite consultar o descargar su código; los ejecutables y `latest.yml` siguen en la Release numérica para mantener las actualizaciones.
 
 ## Flujo de publicación
 
@@ -41,6 +45,10 @@ Comprueba TypeScript, motor, actualizador, interfaz, exportaciones reales y cont
 El permiso `contents: write` y el token temporal `GITHUB_TOKEN` pertenecen al trabajo de publicación. El token solo se entrega a los pasos de GitHub CLI. No se incrusta en la aplicación ni hace falta un token personal para este repositorio público.
 
 El flujo crea un borrador de GitHub Release, sube todos los archivos y publica al terminar. Así, `latest.yml` solo se anuncia cuando el instalador está disponible. Los informes y capturas se conservan como artefactos de Actions durante 14 días.
+
+Después llama a [Sincronizar tags públicas](../.github/workflows/release-tags.yml), que lee la versión visible del commit publicado y crea una tag anotada en ese mismo commit. Utiliza `GITHUB_TOKEN`, de modo que la nueva tag no dispara otra compilación. Si ya existe y coincide, termina correctamente; si apunta a otro commit, falla sin sobrescribirla.
+
+Para añadir la tag pública a una Release anterior o recuperar una sincronización interrumpida, ejecuta **Sincronizar tags públicas** desde Actions, selecciona `main` e indica la tag numérica existente (por ejemplo, `v1.0.5` para crear `v1.0.4b`). Este flujo no vuelve a compilar ni cambia los archivos publicados.
 
 | Archivo | Uso |
 | --- | --- |

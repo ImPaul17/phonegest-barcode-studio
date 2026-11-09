@@ -128,3 +128,11 @@ jobs:
             release/release-validation.json
           retention-days: 14
           if-no-files-found: ignore
+
+  public-tags:
+    needs: release
+    permissions:
+      contents: write
+    uses: ./.github/workflows/release-tags.yml
+    with:
+      tag: ${{ inputs.tag || github.ref_name }}
