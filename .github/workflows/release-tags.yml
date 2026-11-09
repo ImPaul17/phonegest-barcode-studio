@@ -74,5 +74,5 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'No se pudo crear el objeto de la tag pública.' }
           $tagObject = $tagJson | ConvertFrom-Json
           gh api --method POST "repos/$env:GH_REPO/git/refs" -f "ref=refs/tags/$publicTag" -f "sha=$($tagObject.sha)"
-          if ($LASTEXITCODE -ne 0) { throw 'No se pudo crear la referencia pública; no se sustituyen tags existentes.' }
+          if ($LASTEXITCODE -ne 0) { throw 'No se pudo crear la referencia pública. Para recuperar una publicación, ejecuta este flujo desde su tag numérica. Las versiones anteriores a este flujo necesitan una sincronización inicial con Git.' }
           Write-Output "Creada $publicTag en el mismo commit que $env:RELEASE_TAG."

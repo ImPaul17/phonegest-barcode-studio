@@ -48,7 +48,9 @@ El flujo crea un borrador de GitHub Release, sube todos los archivos y publica a
 
 Después llama a [Sincronizar tags públicas](../.github/workflows/release-tags.yml), que lee la versión visible del commit publicado y crea una tag anotada en ese mismo commit. Utiliza `GITHUB_TOKEN`, de modo que la nueva tag no dispara otra compilación. Si ya existe y coincide, termina correctamente; si apunta a otro commit, falla sin sobrescribirla.
 
-Para añadir la tag pública a una Release anterior o recuperar una sincronización interrumpida, ejecuta **Sincronizar tags públicas** desde Actions, selecciona `main` e indica la tag numérica existente (por ejemplo, `v1.0.5` para crear `v1.0.4b`). Este flujo no vuelve a compilar ni cambia los archivos publicados.
+Para recuperar una sincronización interrumpida, ejecuta **Sincronizar tags públicas** desde Actions, selecciona como referencia la tag numérica de la publicación e indica también esa tag en el campo de entrada. Este flujo no vuelve a compilar ni cambia los archivos publicados. Puede repetirse: si la tag pública ya existe en el commit correcto, termina sin cambios.
+
+Las publicaciones anteriores a la incorporación de este flujo necesitan crear su tag pública una vez con Git, porque su commit no incluye el workflow nuevo. La correspondencia inicial es **`v1.0.4b` → commit de `v1.0.5`**; se conserva `v1.0.5` para el actualizador.
 
 | Archivo | Uso |
 | --- | --- |
