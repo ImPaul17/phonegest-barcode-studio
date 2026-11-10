@@ -10,7 +10,13 @@ const packagePaths=execFileSync(process.execPath,[npmCli,'ls','--omit=dev','--al
 const oldNames=new Set(['react','react-dom','scheduler','jsbarcode','lucide-react','@fontsource/inter','sharp','@img/sharp-win32-x64','@img/colour','detect-libc','semver']);
 const sections=[];
 for(const directory of packagePaths){
-  const info=JSON.parse(await readFile(path.join(directory,'package.json'),'utf8'));
+  const packageFile=await readFile(path.join(directory,'package.json'),'utf8').catch(error=>{
+    // npm can list optional packages for other platforms that have no files here.
+    if(error.code==='ENOENT')return null;
+    throw error;
+  });
+  if(!packageFile)continue;
+  const info=JSON.parse(packageFile);
   if(oldNames.has(info.name))continue;
   const files=(await readdir(directory)).filter(file=>/^(?:licen[sc]e|copying|notice)(?:$|[.\-_])/i.test(file));
   const texts=[];

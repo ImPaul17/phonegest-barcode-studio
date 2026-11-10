@@ -1,10 +1,16 @@
 # PhoneGest Barcode Studio
 
-Aplicación de Windows para generar, organizar, imprimir y exportar códigos de barras Code 128 para uso interno de PhoneGest. Incluye el logo negro de PhoneGest y un documento A4 con identificadores, numeración y casillas para marcar paquetes.
+Aplicación web y de Windows para generar, organizar, imprimir y exportar códigos de barras Code 128 para uso interno de PhoneGest. Incluye el logo negro de PhoneGest y un documento A4 con identificadores, numeración y casillas para marcar paquetes.
 
-La generación, la vista previa, las exportaciones y la impresión funcionan sin conexión y se realizan en el equipo. Solo las actualizaciones utilizan Internet; los identificadores no se envían a GitHub ni a otros servicios. El programa incluye su entorno de ejecución: los usuarios no necesitan instalar Node.js, Python, fuentes ni complementos.
+La generación, la vista previa, las exportaciones y la impresión se realizan en el equipo. Los identificadores, proyectos y exportaciones se procesan localmente. Los usuarios pueden abrir la web en el navegador o usar el ejecutable de Windows con su entorno de ejecución incluido.
 
-## Instalar o ejecutar
+## Abrir la edición web
+
+Abre [PhoneGest Barcode Studio en GitHub Pages](https://impaul17.github.io/phonegest-barcode-studio/). Una vez cargada, la aplicación trabaja con los códigos en el navegador. La sesión se guarda en ese navegador. Exporta un proyecto `.pgbs` para conservar una copia o llevarlo a otro navegador o a Windows.
+
+**Guardar como PDF** abre el diálogo de impresión. Elige ese destino, tamaño **A4** y escala **100 %**. La exportación de imágenes descarga un PNG para un código o un ZIP para varios. Para pegar, puedes usar `Ctrl+V` si el navegador no concede acceso al portapapeles.
+
+## Instalar o ejecutar en Windows
 
 Descarga los ejecutables desde [GitHub Releases](https://github.com/ImPaul17/phonegest-barcode-studio/releases/latest). Destinado a **Windows 10/11 de 64 bits (x64)**. Se generan dos variantes en `release/`:
 
@@ -19,7 +25,7 @@ La versión actual es **1.0.4c**, tanto en el código y la aplicación como en e
 
 Los ejecutables actuales no tienen certificado de firma digital. Windows puede identificar al editor como desconocido. Utiliza los archivos del repositorio de PhoneGest enlazado arriba.
 
-## Actualizaciones
+## Actualizaciones de Windows
 
 **Para pasar desde una versión anterior a 1.0.4c, descarga y ejecuta una vez el instalador 1.0.4c desde GitHub Releases.** Los actualizadores anteriores solo admiten versiones numéricas y no pueden hacer automáticamente esta transición al formato con letras. La edición portable se cambia descargando el portable nuevo.
 
@@ -34,7 +40,7 @@ El origen es el repositorio público `ImPaul17/phonegest-barcode-studio` y la in
 1. Escribe o pega un identificador por línea y pulsa **Añadir códigos**. También puedes usar **Pegar** o probar los ejemplos incluidos.
 2. Edita, elimina y ordena los códigos desde la lista. Puedes arrastrar las filas o usar sus botones de movimiento.
 3. Comprueba la vista previa y ajusta el documento desde **Configuración**: distribución, número inicial, texto visible, numeración, casillas y título opcional.
-4. Pulsa **Generar PDF**, **Imprimir** o **Exportar imágenes**. La exportación de imágenes guarda una etiqueta PNG por identificador a 300 ppp en la carpeta elegida.
+4. Pulsa **Generar PDF**, **Imprimir** o **Exportar imágenes**. La exportación genera una etiqueta PNG por identificador a 300 ppp. En Windows se guardan en la carpeta elegida.
 5. Guarda un proyecto para recuperar el lote y sus opciones más adelante.
 
 La distribución predeterminada es **PhoneGest · 4 por página**. También están disponibles **Compacto · 7 por página** y **Amplio · 2 por página**. Los documentos mantienen el logo negro, la numeración continua y las casillas según la configuración elegida. La vista previa se actualiza al cambiar códigos u opciones. El modo claro, oscuro o del sistema afecta a la interfaz; el documento conserva el fondo blanco para imprimir.
@@ -70,7 +76,7 @@ El botón **Deshacer** conserva hasta 20 cambios de la lista durante la sesión 
 
 ## Datos locales y proyectos
 
-La sesión se guarda automáticamente en la carpeta de datos de la aplicación, normalmente:
+En Windows, la sesión se guarda automáticamente en la carpeta de datos de la aplicación, normalmente:
 
 ```text
 %APPDATA%\PhoneGest Barcode Studio\session.json
@@ -105,6 +111,10 @@ En PowerShell puede utilizarse `npm.cmd` si la política local impide ejecutar `
 | --- | --- |
 | `npm run dev` | Inicia Vite en `127.0.0.1:5173` y la ventana de Electron con recarga de desarrollo. |
 | `npm run build` | Comprueba TypeScript y compila la interfaz en `dist/`. |
+| `npm run dev:web` | Ejecuta la edición web con recarga de desarrollo. |
+| `npm run build:web` | Genera la edición de GitHub Pages en `dist-web/`. |
+| `npm run preview:web` | Sirve localmente la compilación web. |
+| `npm run test:web` | Prueba la compilación web en Chromium. Prepara el navegador con `npx playwright install chromium`. |
 | `npm start` | Abre con Electron la compilación existente de `dist/`. |
 | `npm test` | Pruebas del motor, PNG, proyectos, acceso, actualizador y metadatos de publicación. |
 | `npm run test:ui` | Ejecuta las pruebas de interfaz en Electron y guarda capturas en `artifacts/`; requiere una compilación actual en `dist/`. |
@@ -135,7 +145,7 @@ La configuración base de empaquetado está en `electron-builder.yml`; `electron
 
 ## Publicar una versión
 
-Los cambios de `main` pasan comprobaciones en Windows. Una etiqueta como **`v1.0.4c`**, que coincida exactamente con `package.json.version`, ejecuta el flujo de publicación y sube juntos el instalador, su `.blockmap`, `latest.yml` y el portable a GitHub Releases. La misma versión, incluida su letra, identifica el código, la aplicación y sus archivos. No se crean aliases numéricos ni se publican documentos de trabajo.
+Los cambios de `main` pasan comprobaciones en Windows y el flujo [Publicar edición web](.github/workflows/pages.yml) despliega la compilación web en GitHub Pages tras probarla en Chromium. Una etiqueta como **`v1.0.4c`**, que coincida exactamente con `package.json.version`, ejecuta la publicación de Windows y sube juntos el instalador, su `.blockmap`, `latest.yml` y el portable a GitHub Releases. La misma versión, incluida su letra, identifica el código, la aplicación y sus archivos.
 
 Consulta [docs/RELEASING.md](docs/RELEASING.md) para preparar una versión y recuperar una publicación interrumpida. No reemplaces archivos de una versión publicada: avanza la letra de revisión o la versión base para mantener coherentes los clientes que ya la descargaron.
 

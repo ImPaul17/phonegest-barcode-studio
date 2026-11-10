@@ -56,4 +56,55 @@
 @media(max-width:1190px){.update-banner{padding:12px 24px}.update-header-button{padding:0 9px}.header-divider{margin:0 8px}}
 
 @media(max-height:800px){.app-header{height:68px;flex-basis:68px}.workspace{padding-top:12px}.workspace-toolbar{min-height:33px;margin-bottom:10px}.workspace-toolbar .button{height:33px}.codes-column{gap:12px}.input-panel{padding:14px}.input-panel .panel-heading{margin-bottom:10px}.input-panel textarea{height:72px;min-height:56px;max-height:160px}.input-panel .input-tools{padding-top:7px;padding-bottom:7px}.input-panel .add-button{height:34px;margin-top:10px;position:sticky;bottom:0;z-index:1;box-shadow:0 -6px 0 var(--panel),0 2px 3px #00659612}.input-panel .input-hint{display:none}.field-error{max-height:54px;overflow:auto}.list-heading{padding:13px 15px}.list-footer{padding:10px 14px}.preview-heading{height:48px}.preview-toolbar{height:40px}.preview-footer{min-height:38px}.preview-canvas{padding:12px 18px}.action-bar{margin-top:10px;padding:10px 14px}.export-actions .button{height:36px}.summary-icon{width:34px;height:34px}.bottom-meta{padding:8px 2px}.update-banner{padding-top:9px;padding-bottom:9px;min-height:64px}}
+
+.web-download-link {
+  height: 35px;
+  text-decoration: none;
+}
+.web-download-link:focus-visible {
+  outline: 3px solid #7fc1a199;
+  outline-offset: 3px;
+}
+.web-app .internal-tag { display: inline-flex; }
+
+@media (hover: none) {
+  .web-app .row-actions { opacity: 1; pointer-events: auto; }
+}
+
+@media (max-width: 860px) {
+  .web-app .avatar { display: none; }
+}
+
+@media (max-width: 760px) {
+  .web-app { overflow: auto; }
+  .web-app .app-header { height: auto; flex: 0 0 auto; min-height: 60px; padding: 10px 16px; gap: 8px; }
+  .web-app .brand { gap: 10px; }
+  .web-app .brand-logo { width: 110px; }
+  .web-app .brand-product { font-size: 13px; gap: 6px; }
+  .web-app .header-divider { display: none; }
+  .web-app .workspace { flex: 0 0 auto; overflow: visible; padding: 14px 16px 0; }
+  .web-app .workspace-toolbar { justify-content: flex-start; }
+  .web-app .studio-grid { display: flex; flex-direction: column; gap: 14px; }
+  .web-app .codes-column { overflow: visible; }
+  .web-app .input-panel { flex: none; max-height: none; }
+  .web-app .list-panel { flex: auto; min-height: 205px; }
+  .web-app .code-list { flex: auto; max-height: 235px; }
+  .web-app .preview-panel { height: clamp(460px, 80dvh, 700px); }
+  .web-app .preview-toolbar { flex-wrap: wrap; height: auto; min-height: 42px; gap: 8px; padding: 6px 12px; }
+  .web-app .action-bar { flex-wrap: wrap; }
+  .web-app .export-actions { flex: 1 0 100%; flex-wrap: wrap; }
+  .web-app .export-actions .button { flex: 1 0 auto; }
+  .web-app .bottom-meta { flex-wrap: wrap; gap: 6px; }
+  .web-app .toast { min-width: min(300px, calc(100vw - 24px)); max-width: calc(100vw - 24px); }
+  .web-app .modal-overlay { padding: 12px; }
+}
+
+@media (max-width: 530px) {
+  .web-app .app-header { flex-direction: column; align-items: stretch; }
+  .web-app .header-tools { justify-content: flex-end; }
+  .web-app .local-processing-badge { margin-right: auto; }
+  .web-app .preview-footer { padding-inline: 7px; gap: 7px; }
+  .web-app .pagination, .web-app .zoom-controls { gap: 3px; }
+  .web-app .export-button { min-width: 100%; }
+}
 .code-list.is-empty{align-items:flex-start}.empty-list{margin-block:auto;flex-shrink:0;width:100%}

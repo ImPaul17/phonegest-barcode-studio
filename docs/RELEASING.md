@@ -45,6 +45,8 @@ La letra es parte de la versión, también para el instalador y el actualizador.
 
 ## Flujo de publicación
 
+La edición web se despliega en [GitHub Pages](https://impaul17.github.io/phonegest-barcode-studio/) desde `main` mediante [Publicar edición web](../.github/workflows/pages.yml). Este flujo construye y prueba `dist-web/`. El flujo de Windows publica los ejecutables desde la tag de la versión.
+
 [Publicar Windows](../.github/workflows/release.yml) se activa al subir una tag `v*`. También permite una ejecución manual indicando una **tag existente**; nunca crea tags. Usa Windows, Node.js 24 y `npm ci` con el lockfile.
 
 Comprueba TypeScript, motor, actualizador, interfaz, exportaciones reales y contenido de `app.asar`. Genera instalador y portable en una única invocación de empaquetado con `--publish never`, y valida el ejecutable empaquetado y los códigos exportados.

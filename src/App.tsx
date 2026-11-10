@@ -8,11 +8,11 @@ const INITIAL_SETTINGS: Settings = { layout: 'comfortable', startNumber: 1, show
 const EXAMPLES = ['L3A5KA9806994060129590B', 'L3A5KA9806994140129590X', 'L3A5KA9807022320129590Q'];
 const ROWS = { comfortable: 4, compact: 7, large: 2 };
 const MAX_CODES = 1000;
+const WINDOWS_DOWNLOADS = 'https://github.com/ImPaul17/phonegest-barcode-studio/releases/latest';
 const layoutNames = { comfortable: 'PhoneGest · 4 por página', compact: 'Compacto · 7 por página', large: 'Amplio · 2 por página' };
 const layoutOptions = Object.entries(layoutNames).map(([value, label]) => ({ value: value as Settings['layout'], label }));
-const desktop = window.phonegest;
-
 export default function App() {
+  const api = window.phonegest;
   const [codes, setCodes] = useState<string[]>([]);
   const [settings, setSettings] = useState<Settings>(INITIAL_SETTINGS);
   const [theme, setTheme] = useState<Theme>('light');
@@ -21,6 +21,7 @@ export default function App() {
   const [logo, setLogo] = useState('');
   const [version, setVersion] = useState('1.0.0');
   const [displayVersion, setDisplayVersion] = useState('');
+  const [isWeb, setIsWeb] = useState(false);
   const [ready, setReady] = useState(false);
   const [saveError, setSaveError] = useState(false);
   const [busy, setBusy] = useState('');
@@ -70,36 +71,36 @@ export default function App() {
     media.addEventListener('change', onChange);
     (async () => {
       try {
-        if (desktop) {
-          const [info, saved] = await Promise.all([desktop.getAppInfo(), desktop.loadSession()]);
+        if (api) {
+          const [info, saved] = await Promise.all([api.getAppInfo(), api.loadSession()]);
           if (!active) return;
-          setLogo(info.logoDataUrl); setVersion(info.version); setDisplayVersion(info.displayVersion || '');
+          setLogo(info.logoDataUrl); setVersion(info.version); setDisplayVersion(info.displayVersion || ''); setIsWeb(info.platform === 'web');
           if (saved) { setCodes(saved.codes); setSettings({...INITIAL_SETTINGS, ...normalizeSettings(saved.settings)} as Settings); setTheme(saved.theme || 'light'); setInput(saved.input || ''); }
         }
       } catch (error) { if (active) setNotice({text: `No se pudo recuperar la sesión: ${errorMessage(error)}`, error: true}); }
       finally { if (active) setReady(true); }
     })();
     return () => { active = false; media.removeEventListener('change', onChange); };
-  }, []);
+  }, [api]);
 
   useEffect(() => {
-    if (!desktop?.getUpdateState) return;
+    if (!api?.getUpdateState) return;
     let active = true;
     const receive = (state: UpdateState) => { if (active) { setUpdateState(state); setUpdateError(''); } };
-    const unsubscribe = desktop.onUpdateState?.(receive);
-    void desktop.getUpdateState().then(receive).catch(() => {
+    const unsubscribe = api.onUpdateState?.(receive);
+    void api.getUpdateState().then(receive).catch(() => {
       if (active) setUpdateError('No se pudo consultar el estado de las actualizaciones. Puedes seguir trabajando.');
     });
     return () => { active = false; unsubscribe?.(); };
-  }, []);
+  }, [api]);
 
   useEffect(() => { document.documentElement.dataset.theme = dark ? 'dark' : 'light'; }, [dark]);
   useEffect(() => {
-    if (!ready || !desktop) return;
+    if (!ready || !api) return;
     let active = true;
-    const timer = setTimeout(() => desktop.saveSession({codes, settings, theme, input} as Session).then(ok => {if(active) setSaveError(!ok);}).catch(() => {if(active) setSaveError(true);}), 450);
+    const timer = setTimeout(() => api.saveSession({codes, settings, theme, input} as Session).then(ok => {if(active) setSaveError(!ok);}).catch(() => {if(active) setSaveError(true);}), 450);
     return () => {active = false; clearTimeout(timer);};
-  }, [codes, settings, theme, input, ready]);
+  }, [api, codes, settings, theme, input, ready]);
   useEffect(() => { setPage(p => Math.min(p, pageCount - 1)); }, [pageCount]);
   useEffect(() => { if (!notice) return; const timer = setTimeout(() => setNotice(null), notice.error ? 9000 : 5000); return () => clearTimeout(timer); }, [notice]);
   useEffect(() => {
@@ -135,35 +136,42 @@ export default function App() {
   const runAction = useCallback(async (action: 'exportPdf' | 'print' | 'exportImages' | 'saveProject' | 'openProject') => {
     if (busy) return;
     if (action !== 'openProject' && !codes.length) {setNotice({text:'Añade al menos un código para continuar.',error:true}); return;}
-    if (!desktop) {setNotice({text:'Esta acción está disponible en la aplicación de Windows.',error:true}); return;}
+    if (!api) {setNotice({text:'Esta acción está disponible en la aplicación de Windows.',error:true}); return;}
     setBusy(action);
     try {
-      const result = action === 'openProject' ? await desktop.openProject() : await desktop[action](project);
+      const result = action === 'openProject' ? await api.openProject() : await api[action](project);
       if (result.canceled) return;
       if (action === 'openProject' && result.project) {
         updateCodes(result.project.codes); setSettings({...INITIAL_SETTINGS,...normalizeSettings(result.project.settings)} as Settings); setPage(0); setInput(''); setInputError('');
       }
-      const messages = {exportPdf:'PDF guardado correctamente.',print:'Documento enviado a la impresora.',exportImages:`${result.count ?? codes.length} imágenes guardadas.`,saveProject:'Proyecto guardado. Podrás continuar más tarde.',openProject:'Proyecto abierto correctamente.'};
+      const imageCount = result.count ?? codes.length;
+      const messages = {
+        exportPdf: isWeb ? 'Elige «Guardar como PDF» en el diálogo de impresión.' : 'PDF guardado correctamente.',
+        print: isWeb ? 'Se abrió el diálogo de impresión del navegador.' : 'Documento enviado a la impresora.',
+        exportImages: isWeb ? imageCount === 1 ? 'Se inició la descarga de la imagen PNG.' : `Se inició la descarga de un ZIP con ${imageCount} imágenes PNG.` : `${imageCount} imágenes guardadas.`,
+        saveProject: isWeb ? 'Se inició la descarga del archivo de proyecto.' : 'Proyecto guardado. Podrás continuar más tarde.',
+        openProject: 'Proyecto abierto correctamente.',
+      };
       setNotice({text:messages[action]});
     } catch(error) {setNotice({text:errorMessage(error),error:true});}
     finally {setBusy('');}
-  }, [busy, codes.length, project, updateCodes]);
+  }, [api, busy, codes.length, isWeb, project, updateCodes]);
 
   const runUpdateAction = async (action: 'check' | 'download' | 'install' | 'releases') => {
     if (updateAction) return;
     setUpdateAction(action);
     setUpdateError('');
     try {
-      if (action === 'check' && desktop?.checkForUpdates) {
-        setUpdateState(await desktop.checkForUpdates());
-      } else if (action === 'download' && desktop?.downloadUpdate) {
-        setUpdateState(await desktop.downloadUpdate());
-      } else if (action === 'releases' && desktop?.openReleasePage) {
-        await desktop.openReleasePage();
-      } else if (action === 'install' && desktop?.installUpdate) {
-        const saved = await desktop.saveSession({ codes, settings, theme, input });
+      if (action === 'check' && api?.checkForUpdates) {
+        setUpdateState(await api.checkForUpdates());
+      } else if (action === 'download' && api?.downloadUpdate) {
+        setUpdateState(await api.downloadUpdate());
+      } else if (action === 'releases' && api?.openReleasePage) {
+        await api.openReleasePage();
+      } else if (action === 'install' && api?.installUpdate) {
+        const saved = await api.saveSession({ codes, settings, theme, input });
         if (!saved) throw new Error('No se pudo guardar la sesión. Guarda el proyecto antes de reiniciar.');
-        await desktop.installUpdate();
+        await api.installUpdate();
       } else {
         throw new Error('Esta acción está disponible en la aplicación de Windows.');
       }
@@ -232,12 +240,12 @@ export default function App() {
     if (editing !== null) {updateCodes(codes.map((code,index) => index === editing ? value : code));setEditing(null);}
   };
   const paste = async () => {
-    try {const value = desktop ? await desktop.readClipboard() : await navigator.clipboard.readText();setInput(previous => previous ? `${previous.trimEnd()}\n${value}` : value);setInputError('');inputRef.current?.focus();}
+    try {const value = api ? await api.readClipboard() : await navigator.clipboard.readText();setInput(previous => previous ? `${previous.trimEnd()}\n${value}` : value);setInputError('');inputRef.current?.focus();}
     catch {setNotice({text:'No se pudo leer el portapapeles. Usa Ctrl + V en el campo de códigos.',error:true});}
   };
   const updatePrimaryAction = updateReady ? 'install' : updates.canAutoUpdate ? 'download' : 'releases';
   const updatePrimaryLabel = updateReady ? 'Reiniciar e instalar' : updates.canAutoUpdate ? updateFailed ? 'Reintentar descarga' : 'Descargar actualización' : 'Abrir descargas';
-  const updatePrimaryDisabled = !!updateAction || !!busy || (updatePrimaryAction === 'releases' ? !desktop?.openReleasePage : updatePrimaryAction === 'install' ? !desktop?.installUpdate : !desktop?.downloadUpdate);
+  const updatePrimaryDisabled = !!updateAction || !!busy || (updatePrimaryAction === 'releases' ? !api?.openReleasePage : updatePrimaryAction === 'install' ? !api?.installUpdate : !api?.downloadUpdate);
   const updatePanel = <section className="updates-section" aria-label="Estado de actualización">
     <div className="update-version-summary"><div><span>Versión actual</span><strong>v{currentDisplayVersion}</strong></div>{hasUpdate && updates.availableVersion && <div><span>{updateReady ? 'Lista para instalar' : 'Versión disponible'}</span><strong>v{availableDisplayVersion}</strong></div>}</div>
     <div className={`update-status ${updates.status === 'error' || updateError ? 'update-status-error' : ''}`} role="status" aria-live="polite">
@@ -247,7 +255,7 @@ export default function App() {
     {updates.status === 'downloading' && <div className="update-download-progress"><progress aria-label="Descarga de la actualización" value={updateProgress} max={100}/><span>{updateProgress === undefined ? 'Descargando…' : `${updateProgress} %`}</span></div>}
     {updateError && <p className="update-inline-error" role="alert">{updateError}</p>}
     <div className="updates-actions">
-      <button className="button button-secondary" onClick={() => void runUpdateAction('check')} disabled={!desktop?.checkForUpdates || updateInProgress || !!updateAction}>{updates.status === 'checking' ? <LoaderCircle size={14} className="spin"/> : <RefreshCw size={14}/>}Buscar actualizaciones</button>
+      <button className="button button-secondary" onClick={() => void runUpdateAction('check')} disabled={!api?.checkForUpdates || updateInProgress || !!updateAction}>{updates.status === 'checking' ? <LoaderCircle size={14} className="spin"/> : <RefreshCw size={14}/>}Buscar actualizaciones</button>
       {((updates.canAutoUpdate && (updates.status === 'available' || updates.status === 'downloaded' || (updates.status === 'error' && updates.availableVersion))) || !updates.canAutoUpdate) && <button className="button button-primary" onClick={() => void runUpdateAction(updatePrimaryAction)} disabled={updatePrimaryDisabled}>{updateAction === updatePrimaryAction ? <LoaderCircle size={14} className="spin"/> : updatePrimaryAction === 'install' ? <RefreshCw size={14}/> : updatePrimaryAction === 'releases' ? <ArrowUpRight size={14}/> : <Download size={14}/>} {updatePrimaryLabel}</button>}
     </div>
     {formatLastChecked(updates.lastCheckedAt) && <p className="update-last-checked">Última comprobación: {formatLastChecked(updates.lastCheckedAt)}</p>}
@@ -263,13 +271,15 @@ export default function App() {
   </aside>;
   const disabled = !codes.length || !!busy || !ready;
 
-  return <div className="app-shell">
+  return <div className={isWeb ? 'app-shell web-app' : 'app-shell'}>
     <header className="app-header">
-      <div className="brand">{logo ? <img src={logo} alt="PhoneGest" className="brand-logo"/> : <span className="brand-text">PhoneGest</span>}<span className="brand-divider"/><div className="brand-product"><span>Barcode Studio</span><span className="internal-tag">INTERNO</span></div></div>
+      <div className="brand">{logo ? <img src={logo} alt="PhoneGest" className="brand-logo"/> : <span className="brand-text">PhoneGest</span>}<span className="brand-divider"/><div className="brand-product"><span>Barcode Studio</span><span className="internal-tag">{isWeb ? 'WEB' : 'INTERNO'}</span></div></div>
       <div className="header-tools">
         <span className="local-processing-badge"><span className="status-dot"/>Procesamiento local</span><span className="header-divider"/>
-        <button ref={updatesButtonRef} className={`button update-header-button ${hasUpdate ? 'has-update' : ''}`} onClick={openUpdates} title={updateReady ? 'Actualización lista para instalar' : hasUpdate ? 'Hay una actualización de PhoneGest' : 'Actualizaciones'} aria-label="Actualizaciones" aria-haspopup="dialog" aria-expanded={updatesOpen} aria-controls={updatesOpen ? 'updates-dialog' : undefined} aria-describedby={hasUpdate ? 'update-header-status' : undefined}>{updateInProgress ? <LoaderCircle size={16} className="spin"/> : <RefreshCw size={16}/>}<span>Actualizaciones</span>{hasUpdate && <span className="update-indicator" aria-hidden="true"/>}</button>
-        <span id="update-header-status" className="sr-only">{updateStatusText}{updates.availableVersion ? ` · Versión ${availableDisplayVersion}` : ''}</span>
+        {isWeb ? <a className="button button-secondary web-download-link" href={WINDOWS_DOWNLOADS} target="_blank" rel="noopener noreferrer" title="Descargar para Windows" aria-label="Descargar para Windows"><Download size={16}/><span>Windows</span></a> : <>
+          <button ref={updatesButtonRef} className={`button update-header-button ${hasUpdate ? 'has-update' : ''}`} onClick={openUpdates} title={updateReady ? 'Actualización lista para instalar' : hasUpdate ? 'Hay una actualización de PhoneGest' : 'Actualizaciones'} aria-label="Actualizaciones" aria-haspopup="dialog" aria-expanded={updatesOpen} aria-controls={updatesOpen ? 'updates-dialog' : undefined} aria-describedby={hasUpdate ? 'update-header-status' : undefined}>{updateInProgress ? <LoaderCircle size={16} className="spin"/> : <RefreshCw size={16}/>}<span>Actualizaciones</span>{hasUpdate && <span className="update-indicator" aria-hidden="true"/>}</button>
+          <span id="update-header-status" className="sr-only">{updateStatusText}{updates.availableVersion ? ` · Versión ${availableDisplayVersion}` : ''}</span>
+        </>}
         <button className="icon-button" onClick={() => setTheme(dark ? 'light' : 'dark')} title={dark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'} aria-label={dark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}>{dark ? <Sun size={19}/> : <Moon size={19}/>}</button><button className="icon-button" onClick={() => setSettingsOpen(true)} title="Configuración" aria-label="Configuración"><Settings2 size={19}/></button><span className="avatar" title="Uso interno PhoneGest">PG</span>
       </div>
     </header>
@@ -306,13 +316,13 @@ export default function App() {
         </section>
       </div>
 
-      <footer className="action-bar"><div className="document-summary"><span className="summary-icon"><CheckCheck size={20}/></span><div><strong>{codes.length ? `${codes.length} ${codes.length===1?'código listo':'códigos listos'} para exportar` : 'Todo listo para empezar'}</strong><span>{codes.length ? `${pageCount} ${pageCount===1?'página':'páginas'} A4` : 'Añade tus primeros códigos'}<span className="summary-dot">·</span>{saveError ? 'No se pudo guardar la sesión' : 'Guardado automático local'}</span></div></div><div className="export-actions"><button className="button button-ghost" onClick={() => void runAction('exportImages')} disabled={disabled}>{busy==='exportImages'?<LoaderCircle className="spin" size={17}/>:<ImageDown size={17}/>}<span>Exportar imágenes</span></button><button className="button button-secondary print-button" onClick={() => void runAction('print')} disabled={disabled}>{busy==='print'?<LoaderCircle className="spin" size={17}/>:<Printer size={17}/>}Imprimir</button><button className="button button-primary export-button" onClick={() => void runAction('exportPdf')} disabled={disabled}>{busy==='exportPdf'?<LoaderCircle className="spin" size={18}/>:<FileDown size={18}/>}Generar PDF<Download size={15}/></button></div></footer>
+      <footer className="action-bar"><div className="document-summary"><span className="summary-icon"><CheckCheck size={20}/></span><div><strong>{codes.length ? `${codes.length} ${codes.length===1?'código listo':'códigos listos'} para exportar` : 'Todo listo para empezar'}</strong><span>{codes.length ? `${pageCount} ${pageCount===1?'página':'páginas'} A4` : 'Añade tus primeros códigos'}<span className="summary-dot">·</span>{saveError ? 'No se pudo guardar la sesión' : isWeb ? 'Guardado en este navegador' : 'Guardado automático local'}</span></div></div><div className="export-actions"><button className="button button-ghost" onClick={() => void runAction('exportImages')} disabled={disabled}>{busy==='exportImages'?<LoaderCircle className="spin" size={17}/>:<ImageDown size={17}/>}<span>Exportar imágenes</span></button><button className="button button-secondary print-button" onClick={() => void runAction('print')} disabled={disabled}>{busy==='print'?<LoaderCircle className="spin" size={17}/>:<Printer size={17}/>}Imprimir</button><button className="button button-primary export-button" onClick={() => void runAction('exportPdf')} disabled={disabled}>{busy==='exportPdf'?<LoaderCircle className="spin" size={18}/>:<FileDown size={18}/>}<span>{isWeb ? 'Guardar como PDF' : 'Generar PDF'}</span><Download size={15}/></button></div></footer>
       <div className="bottom-meta"><span>PHONEGEST BARCODE STUDIO <span>v{currentDisplayVersion}</span></span><span><ShieldCheck size={12}/>Tus códigos se procesan siempre en este equipo.</span></div>
     </main>
 
     {notice && <div className={`toast ${notice.error?'toast-error':''}`} role={notice.error?'alert':'status'}>{notice.error?<X size={18}/>:<CheckCircle2 size={18}/>}<span>{notice.text}</span><button className="icon-button small" onClick={() => setNotice(null)} aria-label="Cerrar notificación"><X size={15}/></button></div>}
 
-    {updatesOpen && <div className="modal-overlay" onMouseDown={event => {if (event.target === event.currentTarget) {event.preventDefault();setUpdatesOpen(false);}}}>
+    {!isWeb && updatesOpen && <div className="modal-overlay" onMouseDown={event => {if (event.target === event.currentTarget) {event.preventDefault();setUpdatesOpen(false);}}}>
       <section id="updates-dialog" ref={updatesDialogRef} className="modal updates-modal" role="dialog" aria-modal="true" aria-labelledby="updates-dialog-title" aria-describedby="updates-dialog-description">
         <div className="modal-heading"><div className="heading-icon blue"><RefreshCw size={20}/></div><div><h2 id="updates-dialog-title">Actualizaciones</h2><p id="updates-dialog-description">Consulta e instala nuevas versiones de la aplicación.</p></div><button className="icon-button" data-initial-focus onClick={() => setUpdatesOpen(false)} aria-label="Cerrar actualizaciones"><X size={20}/></button></div>
         <div className="modal-content">{updatePanel}</div>
