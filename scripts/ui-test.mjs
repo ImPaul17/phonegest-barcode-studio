@@ -183,7 +183,7 @@ try {
   await page.mouse.up();
   assert.notEqual(await sheet.getAttribute('style'),beforeDrag,'Dragging the sheet pans it inside the workspace');
   await page.getByRole('button',{name:'Ajustar',exact:true}).click();
-  await page.waitForFunction(()=>document.querySelector('.page-wrapper').style.transform.includes('0px'));
+  await page.waitForFunction(value => document.querySelector('.page-wrapper').style.transform.includes('0px') && Number(document.querySelector('.zoom-controls').innerText.match(/(\d+)%/)[1]) === value,initialZoom);
   assert.equal(await zoomValue(),initialZoom,'Fit restores the centered page at its original scale');
   await application.evaluate(({dialog},directory)=>{
     dialog.showSaveDialog = async (_window,options)=>{globalThis.uiSaveOptions=options;return {canceled:false,filePath:`${directory}/${options.title==='Guardar PDF'?'ui-export.pdf':options.title?.includes('ZIP')?'ui-images.zip':'ui-project.pgbs'}`};};
