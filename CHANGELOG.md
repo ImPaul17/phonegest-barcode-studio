@@ -1,6 +1,6 @@
 # Cambios
 
-## 1.0.6 · preparada, pendiente de publicación en Windows
+## 1.0.6
 
 - Retirado Liquid Glass y el avatar PG de la cabecera. Las sesiones anteriores con ese tema pasan al modo oscuro.
 - Numeración inicial editable: permite borrar el valor y escribir otro número.

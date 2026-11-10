@@ -4,7 +4,7 @@ El origen del actualizador es el repositorio público [ImPaul17/phonegest-barcod
 
 ## Una versión para toda la aplicación
 
-La versión actual es **1.0.5**. `package.json.version`, los campos propios del lockfile, el paquete instalado, `app.getVersion()`, `latest.yml` y los nombres de los ejecutables utilizan ese valor. La Release utiliza la tag **`v1.0.5`**.
+La versión actual es **1.0.6**. `package.json.version`, los campos propios del lockfile, el paquete instalado, `app.getVersion()`, `latest.yml` y los nombres de los ejecutables utilizan ese valor. La Release utiliza la tag **`v1.0.6`**.
 
 Las mejoras pequeñas avanzan una letra minúscula: **1.0.4c**, **1.0.4d**, **1.0.4e**, etc. El comparador del actualizador ordena primero los tres componentes numéricos y después la revisión: **1.0.4 < 1.0.4a < 1.0.4b < 1.0.4c < 1.0.5**. Se admite una sola letra de `a` a `z`; después de `z`, incrementa la versión base.
 
@@ -12,10 +12,10 @@ Los campos binarios fijos de los recursos de Windows solo admiten números. Cuan
 
 ## Preparar una versión
 
-Para publicar, por ejemplo, **1.0.5b**:
+Para publicar, por ejemplo, **1.0.6b**:
 
-1. Actualiza `package.json.version` a `1.0.5b` y los dos campos de versión propios de `package-lock.json`: el de la raíz y el de `packages[""]`.
-2. Pon `releaseInfo.releaseName: 1.0.5b` en `electron-builder.yml`.
+1. Actualiza `package.json.version` a `1.0.6b` y los dos campos de versión propios de `package-lock.json`: el de la raíz y el de `packages[""]`.
+2. Pon `releaseInfo.releaseName: 1.0.6b` en `electron-builder.yml`.
 3. Actualiza los nombres de descarga y la versión actual en `README.md`.
 4. Regenera los avisos y ejecuta las comprobaciones.
 
@@ -37,8 +37,8 @@ No uses `npm version patch`: incrementaría la base numérica en lugar de avanza
 Revisa y confirma los cambios, súbelos a `main` y espera al resultado de **Comprobar Windows** en Actions. Después crea una tag que coincida exactamente con la versión de `package.json`:
 
 ```powershell
-git tag -a v1.0.5b -m "PhoneGest Barcode Studio 1.0.5b"
-git push origin v1.0.5b
+git tag -a v1.0.6b -m "PhoneGest Barcode Studio 1.0.6b"
+git push origin v1.0.6b
 ```
 
 La letra es parte de la versión, también para el instalador y el actualizador. No reutilices tags ni rebajes versiones. El flujo rechaza diferencias entre tag, paquete y versión visible, y no sustituye publicaciones ya terminadas.
@@ -51,16 +51,18 @@ La edición web se despliega en [GitHub Pages](https://impaul17.github.io/phoneg
 
 Comprueba TypeScript, motor, actualizador, interfaz, exportaciones reales y contenido de `app.asar`. Genera instalador y portable en una única invocación de empaquetado con `--publish never`, y valida el ejecutable empaquetado y los códigos exportados.
 
+Tanto **Comprobar Windows** en `main` como **Publicar Windows** ejecutan `scripts/installer-integration.ps1` en un runner temporal de GitHub Actions. La prueba instala en una carpeta de prueba, cambia a otro destino y comprueba la retirada de la instalación anterior, la conservación de la sesión y la coincidencia SHA-512 del registro y de la copia del instalador en caché. El script rechaza ejecutarse fuera de ese runner; no debe usarse sobre una instalación personal. El informe se guarda en `build/installer-integration.json`.
+
 El permiso `contents: write` y el token temporal `GITHUB_TOKEN` pertenecen al trabajo de publicación. El token solo se entrega a los pasos de GitHub CLI. No se incrusta en la aplicación ni hace falta un token personal para este repositorio público.
 
 El flujo crea un borrador de GitHub Release, sube todos los archivos y publica al terminar. Así, `latest.yml` solo se anuncia cuando el instalador está disponible. Los informes y capturas se conservan como artefactos de Actions durante 14 días. No hay un segundo flujo de aliases ni tags internas diferentes.
 
 | Archivo | Uso |
 | --- | --- |
-| `PhoneGest-Barcode-Studio-1.0.5-Instalador.exe` | Instalador NSIS y archivo descargado por el actualizador. |
-| `PhoneGest-Barcode-Studio-1.0.5-Instalador.exe.blockmap` | Mapa de bloques del instalador. |
-| `latest.yml` | Versión `1.0.5`, `releaseName` idéntico, nombre, tamaño y SHA512 exactos del instalador. |
-| `PhoneGest-Barcode-Studio-1.0.5-Portable.exe` | Descarga manual de la edición portable. |
+| `PhoneGest-Barcode-Studio-1.0.6-Instalador.exe` | Instalador NSIS y archivo descargado por el actualizador. |
+| `PhoneGest-Barcode-Studio-1.0.6-Instalador.exe.blockmap` | Mapa de bloques del instalador. |
+| `latest.yml` | Versión `1.0.6`, `releaseName` idéntico, nombre, tamaño y SHA512 exactos del instalador. |
+| `PhoneGest-Barcode-Studio-1.0.6-Portable.exe` | Descarga manual de la edición portable. |
 
 `scripts/release-validation.mjs` verifica versiones, hashes, tamaños, nombres y que el blockmap cubra el instalador. Registra también SHA256 de los cuatro archivos en `release/release-validation.json`. El portable no debe aparecer como archivo instalable en `latest.yml`.
 
@@ -68,7 +70,7 @@ No subas PDF originales, proyectos `.pgbs`, sesiones, códigos de clientes ni ca
 
 ## Actualizaciones y revisión B histórica
 
-La [revisión B histórica](https://github.com/ImPaul17/phonegest-barcode-studio/releases/tag/v1.0.4b) conserva sus archivos originales. Se empaquetó con el número interno **1.0.5**, por lo que quien use la B debe descargar e instalar manualmente la nueva **1.0.5** desde [GitHub Releases](https://github.com/ImPaul17/phonegest-barcode-studio/releases/latest). La edición portable se sustituye descargando el nuevo portable.
+La [revisión B histórica](https://github.com/ImPaul17/phonegest-barcode-studio/releases/tag/v1.0.4b) conserva sus archivos originales. Se empaquetó con el número interno **1.0.5**, que impedía distinguirla de la posterior publicación **1.0.5**. La versión actual **1.0.6** supera ese número, aunque no se ha verificado aquí el ciclo completo de actualización desde la B. Si el actualizador de esa revisión no ofrece la nueva versión, descarga e instala manualmente el instalador actual desde [GitHub Releases](https://github.com/ImPaul17/phonegest-barcode-studio/releases/latest). La edición portable se sustituye descargando el nuevo portable.
 
 Desde **1.0.4c**, el actualizador compara directamente las versiones con letras y descarga las nuevas en segundo plano. Espera a **Reiniciar e instalar** y guarda antes la sesión. No usa versiones preliminares ni permite bajar de versión. Las releases históricas y sus archivos conservan su contenido original; no se rebautizan binarios antiguos como si fueran la nueva versión.
 

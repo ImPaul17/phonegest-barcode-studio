@@ -95,7 +95,7 @@ Ambas ediciones guardan PDF y PNG desde la aplicación.
 
 Para cambiar de disco después de instalar, abre **Configuración → Ubicación de la aplicación → Cambiar ubicación**. Se guarda la sesión y se abre el asistente de la misma versión para elegir el nuevo destino. Los ajustes permanecen en `%APPDATA%` y los proyectos externos conservan su ubicación. El instalador registra su propia comprobación SHA-512 para verificar la copia en caché **sin conexión**; si falta esa copia, se pide seleccionar el instalador original. En instalaciones sin ese registro, la verificación de recuperación usa GitHub. También puedes ejecutar el instalador manualmente y elegir otra carpeta.
 
-**Si tienes la [revisión B histórica](https://github.com/ImPaul17/phonegest-barcode-studio/releases/tag/v1.0.4b)**, instala manualmente la nueva versión. El ejecutable de la B usaba el número interno `1.0.5` y no distingue esta publicación. Las revisiones con letras se reconocen desde la C. Los ejecutables actuales no tienen firma digital, por lo que Windows puede mostrar un aviso de editor desconocido.
+**Si tienes la [revisión B histórica](https://github.com/ImPaul17/phonegest-barcode-studio/releases/tag/v1.0.4b)**, su número interno `1.0.5` impedía distinguirla de la posterior publicación `1.0.5`. La versión `1.0.6` supera ese número. Si tu actualizador no la ofrece, descarga e instala manualmente la versión actual. Las revisiones con letras se reconocen desde la C. Los ejecutables actuales no tienen firma digital, por lo que Windows puede mostrar un aviso de editor desconocido.
 
 </details>
 
@@ -192,7 +192,7 @@ La interfaz vive en `src/`, el motor compartido en `shared/` y la integración d
 
 </details>
 
-La [edición web](.github/workflows/pages.yml) se despliega desde `main`. La [publicación de Windows](.github/workflows/release.yml) se ejecuta desde tags como `v1.0.5`. Los pasos de empaquetado, validación y recuperación están en la [guía de publicación](docs/RELEASING.md).
+La [edición web](.github/workflows/pages.yml) se despliega desde `main`. La [publicación de Windows](.github/workflows/release.yml) se ejecuta desde tags como `v1.0.6`. Los pasos de empaquetado, validación y recuperación están en la [guía de publicación](docs/RELEASING.md).
 
 Los cambios de `main` también generan un instalador y un portable **de prueba** en los artefactos de **Comprobar Windows**, durante 14 días. Esa compilación no crea una release ni se anuncia al actualizador. Consulta las novedades en [CHANGELOG.md](CHANGELOG.md).
 
