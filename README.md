@@ -1,15 +1,14 @@
-<h1 align="center">
-  <img src="docs/media/banner.webp" alt="PhoneGest Barcode Studio · Code 128 para web y Windows" width="960">
-</h1>
+<h1 align="center"><img src="assets/phonegest-icon.png" alt="" width="44" height="44" align="middle">&nbsp;PhoneGest Barcode&nbsp;Studio</h1>
 
 <p align="center">
-  Prepara lotes de códigos de barras <strong>Code 128</strong>, organízalos en hojas A4 y exporta las etiquetas. Todo se procesa en tu equipo.
+  <strong>Etiquetas Code 128 para web y Windows.</strong><br>
+  Prepara lotes, organízalos en hojas A4 y exporta las etiquetas desde tu equipo.
 </p>
 
 <p align="center">
-  <a href="https://impaul17.github.io/phonegest-barcode-studio/"><img src="docs/media/open-web.svg" alt="Abrir edición web" width="195" height="44"></a>
+  <a href="https://impaul17.github.io/phonegest-barcode-studio/"><img src="docs/media/open-web.svg" alt="Abrir edición web" width="164"></a>
   &nbsp;
-  <a href="https://github.com/ImPaul17/phonegest-barcode-studio/releases/latest"><img src="docs/media/download-windows.svg" alt="Descargar para Windows" width="195" height="44"></a>
+  <a href="https://github.com/ImPaul17/phonegest-barcode-studio/releases/latest"><img src="docs/media/download-windows.svg" alt="Descargar para Windows" width="164"></a>
 </p>
 
 <p align="center">
@@ -24,13 +23,32 @@
 
 ## Capturas
 
-**Edición web** · Lista de códigos y vista previa A4 en el navegador.
-
-![PhoneGest Barcode Studio en la web, con una lista de códigos de ejemplo y su vista previa A4 en tema claro](docs/media/studio-web.webp)
-
-**Edición Windows** · Espacio de trabajo en tema oscuro, con exportación e impresión desde la aplicación.
-
-![PhoneGest Barcode Studio en Windows, con la lista de códigos y el documento A4 en tema oscuro](docs/media/studio-windows.webp)
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="docs/media/studio-web.webp"><img src="docs/media/studio-web.webp" alt="Edición web en tema claro con la lista de códigos y la vista previa A4" width="100%"></a><br>
+      <strong>Edición web</strong><br>
+      Generación y vista previa en el navegador.
+    </td>
+    <td width="50%" valign="top">
+      <a href="docs/media/studio-windows.webp"><img src="docs/media/studio-windows.webp" alt="Edición Windows en tema oscuro con su documento A4 y las opciones de exportación" width="100%"></a><br>
+      <strong>Edición Windows</strong><br>
+      El espacio de trabajo en tema oscuro.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="docs/media/studio-settings.webp"><img src="docs/media/studio-settings.webp" alt="Panel de configuración de las etiquetas y la distribución A4" width="100%"></a><br>
+      <strong>Configuración</strong><br>
+      Distribución, numeración y casillas.
+    </td>
+    <td width="50%" valign="top">
+      <a href="docs/media/studio-export.webp"><img src="docs/media/studio-export.webp" alt="PDF A4 exportado desde la aplicación Windows con etiquetas Code 128" width="100%"></a><br>
+      <strong>Exportación PDF</strong><br>
+      Documento A4 generado en Windows.
+    </td>
+  </tr>
+</table>
 
 <img src="docs/media/divider.svg" alt="" width="100%">
 
@@ -57,13 +75,26 @@
 
 ### Elige tu edición
 
-| Edición | Cómo abrirla | PDF y PNG |
-| :--- | :--- | :--- |
-| **Web** | Abre [Barcode Studio en el navegador](https://impaul17.github.io/phonegest-barcode-studio/). La sesión se guarda en ese navegador. | **Guardar como PDF** abre el diálogo de impresión. La descarga de imágenes es un PNG para un código o un ZIP para varios. |
-| **Windows · Instalador** | Descarga `*-Instalador.exe` en [GitHub Releases](https://github.com/ImPaul17/phonegest-barcode-studio/releases/latest). Requiere Windows 10/11 x64. | Guarda PDF y PNG directamente desde la aplicación. Permite actualizar desde el menú **Actualizaciones**. |
-| **Windows · Portable** | Descarga `*-Portable.exe` en [GitHub Releases](https://github.com/ImPaul17/phonegest-barcode-studio/releases/latest). Se ejecuta en Windows 10/11 x64 sin instalación. | Ofrece las mismas exportaciones. Para actualizar, descarga el portable de la nueva versión. |
+<details>
+<summary><strong>Web</strong> · abre la aplicación en el navegador</summary>
+
+Abre [Barcode Studio en la web](https://impaul17.github.io/phonegest-barcode-studio/). La sesión se guarda en ese navegador. **Guardar como PDF** abre el diálogo de impresión. La descarga de imágenes es un PNG para un código o un ZIP para varios.
+
+</details>
+
+<details>
+<summary><strong>Windows</strong> · instalador y portable</summary>
+
+Para Windows 10/11 x64, elige un archivo de [GitHub Releases](https://github.com/ImPaul17/phonegest-barcode-studio/releases/latest).
+
+- **Instalador** (`*-Instalador.exe`). Permite actualizar desde el menú **Actualizaciones**.
+- **Portable** (`*-Portable.exe`). Abre la aplicación directamente. Para actualizar, descarga el portable de la nueva versión.
+
+Ambas ediciones guardan PDF y PNG desde la aplicación.
 
 **Si vienes de una edición anterior a 1.0.4c**, ejecuta una vez el [instalador de la revisión C](https://github.com/ImPaul17/phonegest-barcode-studio/releases/tag/v1.0.4c). A partir de la C, la edición instalada puede recibir las siguientes revisiones con letras. Los ejecutables actuales no tienen firma digital, por lo que Windows puede mostrar un aviso de editor desconocido.
+
+</details>
 
 ### Crea tu primer documento
 
@@ -93,15 +124,23 @@ El botón **Deshacer** conserva hasta 20 cambios durante la sesión. Si el naveg
 
 </details>
 
-### Datos y proyectos
+<details>
+<summary><strong>Datos y proyectos</strong></summary>
 
 Los códigos, proyectos y exportaciones se procesan localmente. GitHub aloja la edición web y las descargas de Windows. La edición de escritorio puede procesar los códigos sin conexión.
 
 La sesión incluye el lote, el borrador, la configuración y el tema. En Windows se guarda normalmente en `%APPDATA%\PhoneGest Barcode Studio\session.json`, también al usar el portable. Los proyectos `.pgbs` son archivos JSON sin cifrar. Puedes moverlos entre ediciones y conservarlos junto a tus demás archivos de trabajo.
 
+</details>
+
 <img src="docs/media/divider.svg" alt="" width="100%">
 
 ## Tecnologías
+
+La interfaz de **React, TypeScript y Vite** se comparte entre el navegador y la aplicación de **Electron**.
+
+<details>
+<summary><strong>Ver todas las tecnologías</strong></summary>
 
 | Área | Tecnologías | Para qué se usan |
 | :--- | :--- | :--- |
@@ -110,6 +149,8 @@ La sesión incluye el lote, el borrador, la configuración y el tema. En Windows
 | **Edición web** | Canvas · fflate · GitHub Pages | PNG, paquetes ZIP y alojamiento estático. |
 | **Edición Windows** | Electron · Sharp · electron-builder · NSIS · electron-updater | Exportaciones, instalador, portable y actualizaciones. |
 | **Verificación** | Node.js · Playwright · ZXing · PDF.js | Pruebas del motor, la interfaz y la lectura de las etiquetas exportadas. |
+
+</details>
 
 ## Desarrollo
 
