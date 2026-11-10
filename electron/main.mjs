@@ -1,15 +1,18 @@
 import { app, BrowserWindow, Menu, clipboard, dialog, ipcMain, session, shell } from 'electron';
-import { readFile, writeFile, rename, mkdir, stat, access, unlink } from 'node:fs/promises';
+import { readFile, writeFile, rename, mkdir, stat, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
-import { renderDocument } from '../shared/index.mjs';
+import { spawn } from 'node:child_process';
+import { renderDocument, resolveFilename } from '../shared/index.mjs';
 import { getDisplayVersion } from '../shared/version.mjs';
-import { validatePayload, validateSession, createProject, readProject, safeFilename, MAX_FILE_BYTES } from './validation.mjs';
+import { validatePayload, validateSession, createProject, readProject, MAX_FILE_BYTES } from './validation.mjs';
 import { isAllowedResourceUrl } from './security.mjs';
-import { createLabelPng } from './image-export.mjs';
+import { writeLabelImages, writeLabelArchive, validateImageExportOptions } from './image-export.mjs';
 import { createDesktopUpdateController } from './updater.mjs';
+import { secureUpdateSession } from './updater-policy.mjs';
+import { createInstallationManager } from './installation.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const packageInfo = createRequire(import.meta.url)('../package.json');
@@ -27,6 +30,7 @@ let sessionWrites = Promise.resolve();
 let latestSessionWrite = Promise.resolve();
 let installingUpdate = false;
 let updateController;
+let installationManager;
 
 app.setName('PhoneGest Barcode Studio');
 if (isSmoke) app.setPath('userData', path.join(app.getPath('temp'), `phonegest-smoke-${process.pid}`));
@@ -177,34 +181,14 @@ async function writePdf(payload, filePath) {
   } finally { window.destroy(); }
 }
 
-async function uniqueFile(directory, basename, extension) {
-  let index = 0;
-  while (true) {
-    const target = path.join(directory, `${basename}${index ? ` (${index + 1})` : ''}.${extension}`);
-    try { await access(target); index += 1; }
-    catch (error) {
-      if (error.code === 'ENOENT') return target;
-      throw error;
-    }
-  }
-}
-
 async function writeImages(payload, directory) {
-  await mkdir(directory, { recursive: true });
-  const files = [];
-  for (const [index, code] of payload.codes.entries()) {
-    const number = payload.settings.startNumber + index;
-    const basename = `${String(number).padStart(3, '0')}_${safeFilename(code)}`;
-    const destination = await uniqueFile(directory, basename, 'png');
-    const bytes = await createLabelPng(code, { ...payload.settings, number, logoDataUrl });
-    await writeFile(destination, bytes, { flag: 'wx' });
-    files.push(destination);
-  }
-  return files;
+  return writeLabelImages(payload, directory, logoDataUrl);
 }
 
 function registerHandlers() {
-  handle('getAppInfo', () => ({ version: app.getVersion(), displayVersion: appDisplayVersion, platform: process.platform, logoDataUrl }));
+  handle('getAppInfo', () => ({ version: app.getVersion(), displayVersion: appDisplayVersion, platform: process.platform, logoDataUrl, author: 'ImPaul' }));
+  handle('getInstallationInfo', () => installationManager.getInfo());
+  handle('changeInstallationLocation', () => installationManager.changeLocation());
   handle('getUpdateState', () => updateController.getState());
   handle('checkForUpdates', () => updateController.checkForUpdates());
   handle('downloadUpdate', () => updateController.downloadUpdate());
@@ -227,10 +211,10 @@ function registerHandlers() {
     return write.then(() => true);
   });
   handle('exportPdf', (value) => runJob(async () => {
-    const payload = validatePayload(value);
+    const payload = { ...validatePayload(value), now: new Date() };
     const result = await dialog.showSaveDialog(mainWindow, {
       title: 'Guardar PDF',
-      defaultPath: path.join(app.getPath('documents'), `PhoneGest-codigos-${filenameDate()}.pdf`),
+      defaultPath: path.join(app.getPath('documents'), resolveFilename(payload.settings.filenameTemplate, payload, 'pdf')),
       filters: [{ name: 'Documento PDF', extensions: ['pdf'] }],
       properties: ['showOverwriteConfirmation', 'createDirectory'],
     });
@@ -252,8 +236,25 @@ function registerHandlers() {
       });
     } finally { window.destroy(); }
   }));
-  handle('exportImages', (value) => runJob(async () => {
+  handle('exportImages', (value, options) => runJob(async () => {
     const payload = validatePayload(value);
+    const { format } = validateImageExportOptions(options);
+    if (format === 'zip') {
+      const result = await dialog.showSaveDialog(mainWindow, {
+        title: 'Guardar imágenes en ZIP',
+        defaultPath: path.join(app.getPath('pictures'), resolveFilename(payload.settings.filenameTemplate, payload, 'zip')),
+        filters: [{ name: 'Archivo ZIP con imágenes PNG', extensions: ['zip'] }],
+        properties: ['showOverwriteConfirmation', 'createDirectory'],
+      });
+      if (result.canceled || !result.filePath) return { canceled: true };
+      const filePath = /\.zip$/i.test(result.filePath) ? result.filePath : `${result.filePath}.zip`;
+      const temporary = `${filePath}.${randomUUID()}.tmp`;
+      try {
+        await writeLabelArchive(payload, temporary, logoDataUrl);
+        await rename(temporary, filePath);
+      } catch (error) { await unlink(temporary).catch(() => {}); throw error; }
+      return { canceled: false, path: filePath, count: payload.codes.length };
+    }
     const result = await dialog.showOpenDialog(mainWindow, {
       title: 'Elegir carpeta para las imágenes PNG',
       defaultPath: app.getPath('pictures'),
@@ -297,6 +298,7 @@ async function runSmoke() {
   const directory = path.resolve(argument && !argument.startsWith('--') ? argument : path.join(ROOT, 'build', 'smoke'));
   const payload = validatePayload({
     codes: ['L3A5KA9806994060129590B', 'L3A5KA9806994140129590X', 'L3A5KA9807022320129590Q'],
+    dates: ['2026-11-10', '', '2026-11-09'],
     settings: { layout: 'comfortable', startNumber: 1, showNumbers: true, showCheckboxes: true, showText: true, documentTitle: '' },
   });
   await mkdir(directory, { recursive: true });
@@ -315,7 +317,7 @@ async function runSmoke() {
   for (const count of [1, 5, 8]) {
     const filePath = path.join(directory, `PhoneGest-${count}-codigos.pdf`);
     const codes = Array.from({ length: count }, (_, index) => payload.codes[index % payload.codes.length]);
-    const bytes = await writePdf({ ...payload, codes }, filePath);
+    const bytes = await writePdf({ ...payload, codes, dates: codes.map((_, index) => payload.dates[index % payload.dates.length] ?? '') }, filePath);
     paginationPdfs.push({ count, path: filePath, bytes });
   }
   const images = await writeImages(payload, path.join(directory, 'imagenes'));
@@ -356,6 +358,59 @@ if (gotLock) {
       },
       cancelInstall: () => { installingUpdate = false; },
       openReleasePage: (url) => shell.openExternal(url),
+    });
+    const maintenanceSession = session.fromPartition('phonegest-maintenance', { cache: false });
+    secureUpdateSession(maintenanceSession);
+    const installedDirectory = path.dirname(process.execPath);
+    const hasInstalledUninstaller = await stat(path.join(installedDirectory, 'Uninstall PhoneGest Barcode Studio.exe')).then((info) => info.isFile(), () => false);
+    installationManager = createInstallationManager({
+      version: app.getVersion(), directory: installedDirectory,
+      userData: app.getPath('userData'), localAppData: process.env.LOCALAPPDATA || path.join(app.getPath('home'), 'AppData', 'Local'),
+      installed: app.isPackaged && hasInstalledUninstaller && process.platform === 'win32' && !isSmoke && !process.env.PORTABLE_EXECUTABLE_FILE && !process.env.PORTABLE_EXECUTABLE_DIR,
+      fetchText: async (url) => {
+        const response = await maintenanceSession.fetch(url, {
+          method: 'GET', credentials: 'omit', cache: 'no-store', signal: AbortSignal.timeout(30000),
+          headers: { Accept: 'text/plain', 'Cache-Control': 'no-cache' },
+        });
+        if (!response.ok || !response.body) throw new Error('No se ha podido verificar el instalador.');
+        const reader = response.body.getReader();
+        const chunks = [];
+        let length = 0;
+        try {
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            length += value.length;
+            if (length > 65536) throw new Error('Los datos del instalador son demasiado grandes.');
+            chunks.push(Buffer.from(value));
+          }
+        } finally { await reader.cancel().catch(() => {}); }
+        return Buffer.concat(chunks).toString('utf8');
+      },
+      chooseInstaller: async (filename) => {
+        const result = await dialog.showOpenDialog(mainWindow, {
+          title: `Selecciona ${filename}`,
+          defaultPath: path.join(app.getPath('downloads'), filename),
+          filters: [{ name: 'Instalador PhoneGest de la versión actual', extensions: ['exe'] }], properties: ['openFile'],
+        });
+        return result.canceled ? undefined : result.filePaths[0];
+      },
+      prepareInstall: async () => {
+        if (activeJob || ['available', 'downloading'].includes(updateController.getState().status)) {
+          throw new Error('Espera a que terminen las exportaciones o la descarga de actualizaciones antes de cambiar la ubicación.');
+        }
+        if (installingUpdate) throw new Error('La aplicación ya está preparando el instalador.');
+        installingUpdate = true;
+        try { await latestSessionWrite; await sessionWrites; }
+        catch (error) { installingUpdate = false; throw error; }
+      },
+      cancelInstall: () => { installingUpdate = false; },
+      launchInstaller: (filename) => new Promise((resolve, reject) => {
+        const child = spawn(filename, [], { detached: true, stdio: 'ignore', windowsHide: true, shell: false });
+        child.once('error', reject);
+        child.once('spawn', () => { child.unref(); resolve(); });
+      }),
+      quit: () => app.quit(),
     });
     registerHandlers();
     await createMainWindow();

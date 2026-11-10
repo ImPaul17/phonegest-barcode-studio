@@ -3,7 +3,7 @@ import type { KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, ChevronDown } from 'lucide-react';
 
-export interface SelectOption<Value extends string> { value: Value; label: string }
+export interface SelectOption<Value extends string> { value: Value; label: string; disabled?: boolean }
 interface SelectProps<Value extends string> {
   value: Value;
   options: readonly SelectOption<Value>[];
@@ -32,7 +32,8 @@ export default function Select<Value extends string>({ value, options, onChange,
 
   const close = () => { setOpen(false); setPosition(null); search.current = { text: '', time: 0 }; };
   const show = (index = selectedIndex) => { setActiveIndex(index); setOpen(true); };
-  const choose = (index: number) => { if (options[index]) onChange(options[index].value); close(); };
+  const choose = (index: number) => { if (options[index] && !options[index].disabled) { onChange(options[index].value); close(); } };
+  const enabledIndices = options.flatMap((option, index) => option.disabled ? [] : [index]);
 
   useLayoutEffect(() => {
     if (!open || disabled) return;
@@ -111,11 +112,14 @@ export default function Select<Value extends string>({ value, options, onChange,
       event.preventDefault();
       event.stopPropagation();
       search.current = { text: '', time: 0 };
-      if (event.key === 'Home') { show(0); return; }
-      if (event.key === 'End') { show(options.length - 1); return; }
+      if (event.key === 'Home') { show(enabledIndices[0] ?? selectedIndex); return; }
+      if (event.key === 'End') { show(enabledIndices.at(-1) ?? selectedIndex); return; }
       if (event.key === 'Enter' || event.key === ' ') { if (open) choose(activeIndex); else show(); return; }
       if (!open) show();
-      else setActiveIndex(index => Math.max(0, Math.min(options.length - 1, index + (event.key === 'ArrowDown' ? 1 : -1))));
+      else setActiveIndex(index => {
+        const current = enabledIndices.indexOf(index);
+        return enabledIndices[Math.max(0, Math.min(enabledIndices.length - 1, current + (event.key === 'ArrowDown' ? 1 : -1)))] ?? index;
+      });
       return;
     }
     if (event.key.length === 1 && !event.altKey) {
@@ -129,7 +133,7 @@ export default function Select<Value extends string>({ value, options, onChange,
       const start = open ? activeIndex : selectedIndex;
       for (let step = 1; step <= options.length; step++) {
         const index = (start + step) % options.length;
-        if (normalize(options[index].label).startsWith(query)) { show(index); return; }
+        if (!options[index].disabled && normalize(options[index].label).startsWith(query)) { show(index); return; }
       }
     }
   };
@@ -139,7 +143,7 @@ export default function Select<Value extends string>({ value, options, onChange,
       <span>{options[selectedIndex]?.label ?? ''}</span><ChevronDown size={14} aria-hidden="true"/>
     </button>
     {open && createPortal(<div id={listboxId} ref={menuRef} role="listbox" aria-label={ariaLabel} className="select-popover" data-side={position?.side} style={position ? { left: position.left, top: position.top, width: position.width, maxHeight: position.maxHeight } : { visibility: 'hidden', left: 0, top: 0, width: 238, maxHeight: 320 }} onMouseDown={event => event.preventDefault()}>
-      {options.map((option, index) => <div key={option.value} id={optionId(index)} role="option" aria-selected={option.value === value} data-active={index === activeIndex} className="select-option" onPointerMove={() => setActiveIndex(index)} onClick={() => choose(index)}><span>{option.label}</span>{option.value === value ? <Check size={15} aria-hidden="true"/> : <span className="select-option-check"/>}</div>)}
+      {options.map((option, index) => <div key={option.value} id={optionId(index)} role="option" aria-selected={option.value === value} aria-disabled={option.disabled || undefined} data-active={index === activeIndex} className="select-option" onPointerMove={() => { if (!option.disabled) setActiveIndex(index); }} onClick={() => choose(index)}><span>{option.label}</span>{option.value === value ? <Check size={15} aria-hidden="true"/> : <span className="select-option-check"/>}</div>)}
     </div>, portalTarget)}
   </>;
 }

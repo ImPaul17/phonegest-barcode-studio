@@ -9,6 +9,7 @@ export const MAX_CODE_LENGTH = 45;
  * @property {boolean} showCheckboxes
  * @property {boolean} showText
  * @property {string} documentTitle
+ * @property {string} filenameTemplate
  */
 
 export const LAYOUTS = Object.freeze({
@@ -24,6 +25,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   showCheckboxes: true,
   showText: true,
   documentTitle: '',
+  filenameTemplate: 'phonegest-barcodes-{total}-{fecha}',
 });
 
 /** Code 128 uses printable ASCII identifiers; controls/FNC escape values are rejected. */
@@ -82,7 +84,9 @@ export function normalizeSettings(settings = {}) {
     showNumbers: typeof source.showNumbers === 'boolean' ? source.showNumbers : DEFAULT_SETTINGS.showNumbers,
     showCheckboxes: typeof source.showCheckboxes === 'boolean' ? source.showCheckboxes : DEFAULT_SETTINGS.showCheckboxes,
     showText: typeof source.showText === 'boolean' ? source.showText : DEFAULT_SETTINGS.showText,
-    documentTitle: typeof source.documentTitle === 'string' ? source.documentTitle.trim().slice(0, 120) : '',
+    documentTitle: typeof source.documentTitle === 'string' ? source.documentTitle.trim().slice(0, 240) : '',
+    filenameTemplate: typeof source.filenameTemplate === 'string' && source.filenameTemplate.trim()
+      ? source.filenameTemplate.trim().slice(0, 180) : DEFAULT_SETTINGS.filenameTemplate,
   };
 }
 

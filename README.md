@@ -3,6 +3,7 @@
 <p align="center">
   <strong>Etiquetas Code 128 para web y Windows.</strong><br>
   Prepara lotes, organízalos en hojas A4 y exporta las etiquetas desde tu equipo.
+  <br>Creado por <a href="https://github.com/ImPaul17">ImPaul</a> para PhoneGest.
 </p>
 
 <p align="center">
@@ -56,11 +57,11 @@
 
 | Función | Qué puedes hacer |
 | :--- | :--- |
-| **Preparar el lote** | Pegar un identificador por línea, editar, reordenar y deshacer cambios. Admite hasta **1.000 códigos** por documento. |
-| **Componer el A4** | Revisar los códigos antes de imprimir y elegir entre **PhoneGest (4)**, **Compacto (7)** y **Amplio (2)** por página. Configurar título, numeración y casillas. |
-| **Exportar** | Imprimir, generar PDF y crear un **PNG a 300 ppp** por etiqueta. |
+| **Preparar el lote** | Pegar un identificador por línea, editar, reordenar y deshacer cambios. Añadir una fecha individual **DD/MM/AAAA** con el lápiz de cada código. Admite hasta **1.000 códigos** por documento. |
+| **Componer el A4** | Elegir **2, 4 o 7** códigos por página y configurar título, numeración y casillas. Ampliar con la rueda del ratón y arrastrar la hoja para desplazarla. La distribución por columnas está prevista para más adelante. |
+| **Exportar** | Imprimir, generar PDF y crear un **PNG a 300 ppp** por etiqueta, en un ZIP o como imágenes sueltas. Personalizar título y nombre del archivo con variables. |
 | **Continuar después** | Recuperar la sesión local y guardar proyectos **`.pgbs`** compatibles entre web y Windows. |
-| **Elegir la apariencia** | Cambiar entre Claro, Oscuro, Sistema y **Liquid Glass** en **Configuración → Apariencia**. La elección se guarda en la sesión y el documento conserva su fondo blanco. |
+| **Elegir la apariencia** | Cambiar entre Claro, Oscuro y Sistema en **Configuración → Apariencia**. La elección se guarda en la sesión y el documento conserva su fondo blanco. |
 
 <details>
 <summary><strong>Formato de los códigos y límites</strong></summary>
@@ -78,7 +79,7 @@
 <details>
 <summary><strong>Web</strong> · abre la aplicación en el navegador</summary>
 
-Abre [Barcode Studio en la web](https://impaul17.github.io/phonegest-barcode-studio/). La sesión se guarda en ese navegador. **Guardar como PDF** abre el diálogo de impresión. La descarga de imágenes es un PNG para un código o un ZIP para varios.
+Abre [Barcode Studio en la web](https://impaul17.github.io/phonegest-barcode-studio/). La sesión se guarda en ese navegador. **Guardar como PDF** abre el diálogo de impresión. **Exportar imágenes** permite elegir ZIP o imágenes sueltas. En navegadores compatibles puedes seleccionar una carpeta; en los demás se solicitan varias descargas.
 
 </details>
 
@@ -87,10 +88,12 @@ Abre [Barcode Studio en la web](https://impaul17.github.io/phonegest-barcode-stu
 
 Para Windows 10/11 x64, elige un archivo de [GitHub Releases](https://github.com/ImPaul17/phonegest-barcode-studio/releases/latest).
 
-- **Instalador** (`*-Instalador.exe`). Permite actualizar desde el menú **Actualizaciones**.
+- **Instalador** (`*-Instalador.exe`). Asistente oscuro con elección de carpeta/disco y acceso directo al escritorio. Permite actualizar desde el menú **Actualizaciones**.
 - **Portable** (`*-Portable.exe`). Abre la aplicación directamente. Para actualizar, descarga el portable de la nueva versión.
 
 Ambas ediciones guardan PDF y PNG desde la aplicación.
+
+Para cambiar de disco después de instalar, abre **Configuración → Ubicación de la aplicación → Cambiar ubicación**. Se guarda la sesión y se abre el asistente de la misma versión para elegir el nuevo destino. Los ajustes permanecen en `%APPDATA%` y los proyectos externos conservan su ubicación. La primera verificación del instalador requiere conexión; si la copia del instalador no está en caché, se pide seleccionar el instalador original de esa versión. También puedes ejecutarlo manualmente y elegir otra carpeta.
 
 **Si tienes la [revisión B histórica](https://github.com/ImPaul17/phonegest-barcode-studio/releases/tag/v1.0.4b)**, instala manualmente la nueva versión. El ejecutable de la B usaba el número interno `1.0.5` y no distingue esta publicación. Las revisiones con letras se reconocen desde la C. Los ejecutables actuales no tienen firma digital, por lo que Windows puede mostrar un aviso de editor desconocido.
 
@@ -109,6 +112,8 @@ PG-ENVIO-003
 ```
 
 Para imprimir, usa **A4 vertical** a **100 %** de escala. En la web, elige **Guardar como PDF** como destino del diálogo si quieres un archivo. Las pruebas leen los códigos exportados con un lector independiente. Para producción, valida también una muestra en la impresora y el lector que vayas a utilizar.
+
+En **Configuración**, el título y el nombre del archivo admiten `{total}`, `{fecha}` (DD-MM-AA), `{fecha_iso}`, `{hora}`, `{paginas}`, `{inicio}`, `{final}`, `{primero}` y `{ultimo}`. Por ejemplo, `phonegest-barcodes-{total}-{fecha}.pdf`. La extensión se añade una sola vez y los caracteres incompatibles con Windows se adaptan automáticamente. Las fechas individuales se guardan con cada etiqueta, incluso cuando hay identificadores repetidos.
 
 <details>
 <summary><strong>Atajos</strong></summary>
@@ -147,7 +152,7 @@ Ambas ediciones comparten la interfaz y el motor de etiquetas Code 128.
 | Área | Tecnologías | Para qué se usan |
 | :--- | :--- | :--- |
 | **Interfaz** | React · TypeScript · Vite | Espacio de trabajo compartido entre web y Windows. |
-| **Apariencia** | [Liquid Glass React](https://github.com/rdev/liquid-glass-react) · CSS | Refracción decorativa y superficies translúcidas del tema Liquid Glass. |
+| **Apariencia** | CSS · Lucide · Inter | Temas claro y oscuro e iconos integrados. |
 | **Etiquetas** | JsBarcode · SVG | Code 128 y documento A4 vectorial. |
 | **Edición web** | Canvas · fflate · GitHub Pages | PNG, paquetes ZIP y alojamiento estático. |
 | **Edición Windows** | Electron · Sharp · electron-builder · NSIS · electron-updater | Exportaciones, instalador, portable y actualizaciones. |
@@ -189,6 +194,8 @@ La interfaz vive en `src/`, el motor compartido en `shared/` y la integración d
 
 La [edición web](.github/workflows/pages.yml) se despliega desde `main`. La [publicación de Windows](.github/workflows/release.yml) se ejecuta desde tags como `v1.0.5`. Los pasos de empaquetado, validación y recuperación están en la [guía de publicación](docs/RELEASING.md).
 
+Los cambios de `main` también generan un instalador y un portable **de prueba** en los artefactos de **Comprobar Windows**, durante 14 días. Esa compilación no crea una release ni se anuncia al actualizador. Consulta las novedades en [CHANGELOG.md](CHANGELOG.md).
+
 <img src="docs/media/divider.svg" alt="" width="100%">
 
-PhoneGest conserva los derechos sobre su nombre, logo e identidad visual. La referencia funcional inicial fue barcodees.com. Consulta los [avisos y licencias de terceros](THIRD-PARTY-NOTICES.txt).
+Aplicación creada por **[ImPaul](https://github.com/ImPaul17)** para el uso interno de PhoneGest. PhoneGest conserva los derechos sobre su nombre, logo e identidad visual. La referencia funcional inicial fue barcodees.com. Consulta los [avisos y licencias de terceros](THIRD-PARTY-NOTICES.txt).

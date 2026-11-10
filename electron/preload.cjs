@@ -4,6 +4,8 @@ const invoke = (name) => (...args) => ipcRenderer.invoke(`phonegest:${name}`, ..
 
 contextBridge.exposeInMainWorld('phonegest', Object.freeze({
   getAppInfo: invoke('getAppInfo'),
+  getInstallationInfo: invoke('getInstallationInfo'),
+  changeInstallationLocation: invoke('changeInstallationLocation'),
   loadSession: invoke('loadSession'),
   saveSession: invoke('saveSession'),
   exportPdf: invoke('exportPdf'),

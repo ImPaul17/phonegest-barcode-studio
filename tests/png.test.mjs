@@ -52,3 +52,11 @@ test('maximum-length ASCII PNG labels remain scannable with logo, large numberin
     assert.equal(await scanPng(withoutText), code);
   }
 });
+
+test('individual dates do not narrow bars or impair maximum-length PNG scanning', async () => {
+  for (const code of [samples[0], 'W'.repeat(MAX_CODE_LENGTH), '1234567890'.repeat(5).slice(0, MAX_CODE_LENGTH)]) {
+    const png = await createLabelPng(code, { number: 999999, date: '2026-11-10', logoDataUrl });
+    assert.equal(await scanPng(png), code);
+  }
+  await assert.rejects(() => createLabelPng('OK', { date: '2026-02-30' }), /fecha/);
+});

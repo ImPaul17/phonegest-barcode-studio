@@ -45,8 +45,8 @@ async function addPrintDensity(png: Blob): Promise<Blob> {
   return new Blob(parts, { type: 'image/png' });
 }
 
-export async function renderLabelPng(code: string, settings: Settings, number: number, logoDataUrl: string) {
-  const svg = createLabelSvg(code, { ...settings, number, logoDataUrl, widthMm: WIDTH_MM, heightMm: HEIGHT_MM });
+export async function renderLabelPng(code: string, settings: Settings, number: number, logoDataUrl: string, date = '') {
+  const svg = createLabelSvg(code, { ...settings, date, number, logoDataUrl, widthMm: WIDTH_MM, heightMm: HEIGHT_MM });
   const pixels = svg.replace(/^<svg\b[^>]*>/, (root: string) => root
     .replace(/\bwidth="[^"]*"/, `width="${WIDTH_PX}"`)
     .replace(/\bheight="[^"]*"/, `height="${HEIGHT_PX}"`));

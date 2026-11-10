@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="164" height="314" viewBox="0 0 164 314">
+  <rect width="164" height="314" fill="#182126"/>
+  <rect x="0" y="0" width="4" height="314" fill="#006596"/>
+  <path d="m60 34 22-12 22 12v26L82 73 60 60Z m0 0 22 13 22-13 M82 47v26 M72 28l22 13" fill="none" stroke="#7fc1a1" stroke-width="2.5" stroke-linejoin="round"/>
+  <g font-family="Segoe UI,Arial,sans-serif" fill="#f5f7f9">
+    <text x="18" y="112" font-size="22" font-weight="650">PhoneGest</text>
+    <text x="18" y="137" font-size="16">Barcode Studio</text>
+    <text x="18" y="206" fill="#a7bac6" font-size="11">Todo en tu equipo.</text>
+    <text x="18" y="224" fill="#a7bac6" font-size="11">Listo para trabajar.</text>
+    <text x="18" y="285" fill="#7fc1a1" font-size="11">Creado por ImPaul</text>
+  </g>
+</svg>

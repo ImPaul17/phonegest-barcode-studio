@@ -6,6 +6,7 @@ import {
   createBarcodeSvg, createLabelSvg, DEFAULT_SETTINGS, encodeCode128, LAYOUTS,
   MAX_CODES, MAX_CODE_LENGTH, MIN_MODULE_WIDTH_MM, normalizeSettings,
   paginateCodes, parseCodes, QUIET_ZONE_MODULES, renderDocument, validateCode,
+  formatDate, normalizeDates, parseDate, resolveFilename, resolveTemplate,
 } from '../shared/index.mjs';
 
 const { BitArray, Code128Reader } = zxing;
@@ -81,7 +82,7 @@ test('settings normalize untrusted persisted values and keep explicit toggles', 
   assert.deepEqual(normalizeSettings({ layout: 'unknown', startNumber: -2, showText: 'false' }), DEFAULT_SETTINGS);
   assert.equal(normalizeSettings({ startNumber: '12', showText: false }).startNumber, 12);
   assert.equal(normalizeSettings({ showText: false }).showText, false);
-  assert.equal(normalizeSettings({ documentTitle: 'x'.repeat(150) }).documentTitle.length, 120);
+  assert.equal(normalizeSettings({ documentTitle: 'x'.repeat(300) }).documentTitle.length, 240);
   assert.deepEqual(normalizeSettings(null), DEFAULT_SETTINGS);
 });
 
@@ -126,4 +127,55 @@ test('print options remove text, numbers and checkboxes while keeping scanner pa
 test('empty preview is one branded A4 sheet and invalid document identifiers fail clearly', () => {
   assert.equal((renderDocument().match(/class="page sheet"/g) ?? []).length, 1);
   assert.throws(() => renderDocument({ codes: ['error\n123'] }), /ASCII/);
+});
+
+test('row dates validate real calendar days and normalize without timezone conversion', () => {
+  assert.equal(parseDate('29/02/2024'), '2024-02-29');
+  assert.equal(parseDate('2000-02-29'), '2000-02-29');
+  assert.equal(parseDate(' 10/11/2026 '), '2026-11-10');
+  assert.equal(formatDate('2026-11-10'), '10/11/2026');
+  assert.equal(parseDate(''), '');
+  for (const invalid of ['29/02/2025', '1900-02-29', '31/04/2026', '00/01/2026', '01/13/2026', '1/1/2026', '2026-01-01T00:00:00Z', '0000-01-01', null]) {
+    assert.equal(parseDate(invalid), null, String(invalid));
+  }
+  assert.deepEqual(normalizeDates(undefined, 2), ['', '']);
+  assert.deepEqual(normalizeDates([], 2), ['', '']);
+  assert.throws(() => normalizeDates(['2026-11-10'], 2), /fecha por código/);
+  assert.throws(() => normalizeDates(['2026-02-30'], 1), /código 1/);
+  assert.throws(() => normalizeDates(Array(1), 1), /código 1/);
+});
+
+test('dates stay attached to individual repeated rows across pages without reducing barcode size', () => {
+  const dates = ['2026-11-10', '', '2026-11-12', '', '2026-11-14'];
+  const html = renderDocument({ codes: Array(5).fill('SAME'), dates });
+  assert.equal((html.match(/class="label-date"/g) ?? []).length, 3);
+  assert.match(html, /datetime="2026-11-10">10\/11\/2026<\/time><div class="identifier"/);
+  assert.ok(html.indexOf('14/11/2026') > html.indexOf('data-page="2"'));
+  const withoutDates = renderDocument({ codes: ['W'.repeat(MAX_CODE_LENGTH)] });
+  const withDate = renderDocument({ codes: ['W'.repeat(MAX_CODE_LENGTH)], dates: ['2026-11-10'] });
+  assert.equal(withDate.match(/<svg[\s\S]*?<\/svg>/)[0], withoutDates.match(/<svg[\s\S]*?<\/svg>/)[0]);
+  assert.throws(() => renderDocument({ codes: ['OK'], dates: ['2026-02-30'] }), /fecha/);
+});
+
+test('document and file templates resolve useful variables with one explicit export date', () => {
+  const context = { codes: ['FIRST', 'SECOND', 'THIRD'], settings: { layout: 'large', startNumber: 8 }, now: new Date(2026, 10, 9, 14, 5) };
+  assert.equal(resolveTemplate('{total}|{fecha}|{fecha_iso}|{hora}|{paginas}|{inicio}|{final}|{primero}|{ultimo}', context), '3|09-11-26|2026-11-09|14-05|2|8|10|FIRST|THIRD');
+  assert.equal(resolveFilename('phonegest-barcodes-{total}-{fecha}.pdf', context), 'phonegest-barcodes-3-09-11-26.pdf');
+  assert.equal(resolveFilename('phonegest-barcodes-{total}-{fecha}.pdf', context, 'zip'), 'phonegest-barcodes-3-09-11-26.zip');
+  const html = renderDocument({ ...context, settings: { ...context.settings, documentTitle: 'Lote {inicio}-{final} · {total} códigos · {fecha}' } });
+  assert.match(html, /Lote 8-10 · 3 códigos · 09-11-26/);
+  assert.throws(() => resolveTemplate('Lote {desconocida}', context), /Variable desconocida: \{desconocida\}/);
+  assert.throws(() => resolveTemplate('Lote {total', context), /Completa las variables/);
+  assert.throws(() => renderDocument({ codes: ['OK'], settings: { documentTitle: '{invalid}' } }), /Variable desconocida/);
+});
+
+test('download filenames sanitize Windows hazards, extensions and identifiers without path escape', () => {
+  assert.equal(resolveFilename('../{primero}.pdf.PDF', { codes: ['A?B:*|'] }), '-A-B---.pdf');
+  assert.equal(resolveFilename('CON.pdf', {}), 'phonegest-barcodes.pdf');
+  assert.equal(resolveFilename('LPT1.other', {}), 'phonegest-barcodes.pdf');
+  assert.equal(resolveFilename(' . ', {}), 'phonegest-barcodes.pdf');
+  assert.equal(resolveFilename('name.pdf.zip.pdf', {}, 'zip'), 'name.zip');
+  assert.equal(resolveFilename('name.pdf.pdf. ', {}), 'name.pdf');
+  assert.equal(resolveTemplate('{primero}', { codes: ['CODE{A}'] }), 'CODE{A}');
+  assert.throws(() => resolveFilename('name', {}, '../pdf'), /extensión/);
 });

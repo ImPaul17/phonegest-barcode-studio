@@ -108,3 +108,40 @@
   .web-app .export-button { min-width: 100%; }
 }
 .code-list.is-empty{align-items:flex-start}.empty-list{margin-block:auto;flex-shrink:0;width:100%}
+.preview-canvas{position:relative;overflow:hidden;display:block;cursor:grab;touch-action:none;user-select:none;outline-offset:-3px}
+.preview-canvas.is-panning{cursor:grabbing}
+.preview-canvas .page-wrapper{position:absolute;left:50%;top:50%;margin:0;will-change:transform}
+.select-option[aria-disabled=true]{color:var(--muted);cursor:default;font-weight:400;background:transparent}
+.image-export-menu{position:fixed;z-index:125;width:255px;padding:5px;border:1px solid var(--border);border-radius:10px;background:var(--panel);color:var(--text);box-shadow:0 10px 36px #14263530}
+.image-export-menu>button{display:flex;align-items:center;gap:11px;width:100%;padding:12px 10px;border:0;border-radius:6px;background:transparent;text-align:left;font-size:11px;color:var(--text)}
+.image-export-menu>button:hover,.image-export-menu>button:focus-visible{background:var(--hover);outline:none}
+.image-export-menu>button>svg{color:var(--blue);flex-shrink:0}
+.image-export-menu>button>span{display:flex;flex-direction:column;gap:5px}
+.image-export-menu small{font-size:9px;color:var(--secondary);line-height:1.5}
+.image-export-trigger[aria-expanded=true]{background:var(--hover);color:var(--text)}
+.filename-preview{display:flex;align-items:flex-start;gap:8px;min-width:0;margin-top:-9px;font-size:10px;color:var(--secondary);line-height:1.7}
+.filename-preview>svg{flex-shrink:0;margin-top:2px}
+.filename-preview>span{overflow-wrap:anywhere}
+.filename-preview .field-error{padding:0}
+.template-help{padding:12px;border:1px solid var(--border);background:var(--soft);border-radius:7px;font-size:10px;color:var(--secondary)}
+.template-help summary{cursor:pointer;color:var(--text);font-weight:500}
+.template-help>p{margin-top:12px;line-height:1.7}
+.template-help dl{margin:8px 0 0}
+.template-help dl>div{display:flex;gap:12px;padding:7px 0;align-items:baseline;border-top:1px solid var(--border)}
+.template-help dt{font:10px Consolas,monospace;color:var(--blue);min-width:76px}
+.template-help dd{margin:0;display:flex;flex:1;justify-content:space-between;gap:8px;font-size:9px}
+.template-help dd>span{color:var(--muted);max-width:100px;overflow-wrap:anywhere}
+.installation-setting,.creator-setting{padding-top:19px;border-top:1px solid var(--border)}
+.installation-setting>strong{font-size:11px;font-weight:500}
+.installation-setting p,.setting-help{font-size:10px;line-height:1.8;color:var(--secondary)}
+.installation-setting p{margin-top:8px}
+.installation-setting .installation-path{font:10px/1.8 Consolas,monospace;overflow-wrap:anywhere;background:var(--soft);padding:9px 11px;border-radius:6px}
+.installation-setting .button{margin-top:12px;height:35px;font-size:10px}
+.creator-setting{display:flex;align-items:center;gap:12px}
+.creator-mark{display:grid;place-items:center;color:var(--blue);background:var(--soft);border:1px solid var(--border);width:39px;height:39px;border-radius:9px;flex-shrink:0}
+.creator-setting strong{font-size:10px;font-weight:500;line-height:1.8}
+.creator-setting strong>span{font-size:9px;color:var(--secondary);margin-left:5px}
+.creator-setting p{font-size:10px;line-height:1.8;color:var(--secondary);margin-top:3px}
+.creator-setting a{color:var(--blue);text-decoration:none;font-weight:500}
+.creator-setting a:hover{text-decoration:underline}
+.setting-help{margin-top:-8px}

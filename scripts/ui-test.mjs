@@ -31,8 +31,8 @@ async function checkLayoutSelectors(page) {
   const toolbar = page.getByRole('combobox',{name:'Formato del documento',exact:true});
   const listbox = page.getByRole('listbox');
   const modal = page.getByRole('dialog',{name:'Hazlo a tu medida'});
-  const compact = 'Compacto · 7 por página';
-  const large = 'Amplio · 2 por página';
+  const compact = '7 por página';
+  const large = '2 por página';
   const report = [];
   const openSettings = async () => {
     await page.getByRole('button',{name:'Configuración',exact:true}).click();
@@ -46,7 +46,8 @@ async function checkLayoutSelectors(page) {
   };
   const assertPopup = async (theme, location) => {
     await listbox.waitFor({state:'visible'});
-    assert.equal(await listbox.getByRole('option').count(),3);
+    assert.equal(await listbox.getByRole('option').count(),4);
+    assert.equal(await listbox.getByRole('option',{name:'Por columnas · Próximamente',exact:true}).getAttribute('aria-disabled'),'true');
     const metrics = await listbox.evaluate(element => {
       const rgba = color => {
         const values = color.match(/[\d.]+/g).map(Number);
@@ -63,22 +64,21 @@ async function checkLayoutSelectors(page) {
         const [light,dark] = [luminance(foreground),luminance(optionBackground)].sort((a,b)=>b-a);
         const optionRect = option.getBoundingClientRect();
         const hit = document.elementFromPoint(optionRect.x+optionRect.width/2,optionRect.y+optionRect.height/2);
-        return {text:option.textContent,contrast:(light+0.05)/(dark+0.05),visible:option.contains(hit)};
+        return {text:option.textContent,contrast:(light+0.05)/(dark+0.05),visible:option.contains(hit),disabled:option.getAttribute('aria-disabled')==='true'};
       });
       return {background,options,rect:{left:rect.left,top:rect.top,right:rect.right,bottom:rect.bottom},viewport:{width:innerWidth,height:innerHeight}};
     });
     assert.equal(metrics.background[3],1,`${theme}/${location}: opaque menu background`);
     assert.ok(metrics.rect.left>=0&&metrics.rect.top>=0&&metrics.rect.right<=metrics.viewport.width&&metrics.rect.bottom<=metrics.viewport.height,`${theme}/${location}: popup fits viewport`);
     for(const option of metrics.options){
-      assert.ok(option.contrast>=4.5,`${theme}/${location}/${option.text}: text contrast ${option.contrast.toFixed(2)}`);
-      assert.ok(option.visible,`${theme}/${location}/${option.text}: popup is not clipped or covered`);
+      if(!option.disabled) assert.ok(option.contrast>=4.5,`${theme}/${location}/${option.text}: text contrast ${option.contrast.toFixed(2)}`);
+      if(!option.disabled) assert.ok(option.visible,`${theme}/${location}/${option.text}: popup is not clipped or covered`);
     }
     report.push({theme,location,...metrics});
     return metrics;
   };
-  for(const theme of ['light','dark','liquid-glass']) {
-    if(theme==='liquid-glass') await chooseAppearance(page,'Liquid Glass',theme);
-    else if(await page.locator('html').getAttribute('data-theme')!==theme) await page.getByRole('button',{name:theme==='dark'?'Cambiar a modo oscuro':'Cambiar a modo claro',exact:true}).click();
+  for(const theme of ['light','dark']) {
+    if(await page.locator('html').getAttribute('data-theme')!==theme) await page.getByRole('button',{name:theme==='dark'?'Cambiar a modo oscuro':'Cambiar a modo claro',exact:true}).click();
     await toolbar.click();
     await assertPopup(theme,'toolbar');
     await page.getByRole('option',{name:compact,exact:true}).hover();
@@ -102,9 +102,9 @@ async function checkLayoutSelectors(page) {
   await page.getByText('Página 1 de 1',{exact:true}).waitFor();
   await openSettings();
   const settings = modal.getByRole('combobox',{name:'Distribución',exact:true});
-  assert.match(await settings.textContent(),/Compacto/);
+  assert.match(await settings.textContent(),/7 por página/);
   await choose(settings,large);
-  assert.match(await toolbar.textContent(),/Amplio/);
+  assert.match(await toolbar.textContent(),/2 por página/);
   await settings.click();
   await modal.getByRole('heading',{name:'Hazlo a tu medida',exact:true}).click();
   await listbox.waitFor({state:'hidden'});
@@ -114,21 +114,21 @@ async function checkLayoutSelectors(page) {
   await toolbar.click();
   await toolbar.press('Home');
   await toolbar.press('Enter');
-  await page.getByText('Página 1 de 2',{exact:true}).waitFor();
+  await page.getByText('Página 1 de 3',{exact:true}).waitFor();
   await toolbar.click();
   await toolbar.press('ArrowDown');
   await toolbar.press('Enter');
-  await page.getByText('Página 1 de 1',{exact:true}).waitFor();
+  await page.getByText('Página 1 de 2',{exact:true}).waitFor();
   await toolbar.click();
   await toolbar.press('ArrowUp');
   await toolbar.press('Enter');
-  await page.getByText('Página 1 de 2',{exact:true}).waitFor();
+  await page.getByText('Página 1 de 3',{exact:true}).waitFor();
   await toolbar.click();
   await toolbar.press('End');
   await toolbar.press('Enter');
-  await page.getByText('Página 1 de 3',{exact:true}).waitFor();
+  await page.getByText('Página 1 de 1',{exact:true}).waitFor();
   await toolbar.click();
-  await toolbar.press('p');
+  await toolbar.press('4');
   await toolbar.press('Enter');
   await page.getByText('Página 1 de 2',{exact:true}).waitFor();
   await toolbar.focus();
@@ -141,15 +141,17 @@ async function checkLayoutSelectors(page) {
   await page.getByRole('heading',{name:'Vista previa',exact:true}).click();
   await listbox.waitFor({state:'hidden'});
   await chooseAppearance(page,'Claro','light');
-  assert.match(await toolbar.textContent(),/PhoneGest/);
-  await writeFile(path.join(output,'phonegest-selectors-report.json'),JSON.stringify({success:true,checks:['light, dark and Liquid Glass normal and hover contrast','viewport and modal popup visibility','click selection and pagination','toolbar/settings synchronization','ArrowUp/ArrowDown/Home/End/Enter','typeahead','Space and Tab','outside click','Escape closes menu before modal'],popups:report},null,2));
+  assert.match(await toolbar.textContent(),/4 por página/);
+  await writeFile(path.join(output,'phonegest-selectors-report.json'),JSON.stringify({success:true,checks:['light and dark normal and hover contrast','viewport and modal popup visibility','click selection and pagination','toolbar/settings synchronization','ArrowUp/ArrowDown/Home/End/Enter skip disabled columns','numeric typeahead','Space and Tab','outside click','Escape closes menu before modal'],popups:report},null,2));
 }
 
 try {
   application = await electron.launch({executablePath:require('electron'),args:[path.join(root,'scripts','ui-harness.mjs')],env,timeout:45000});
   const page = await application.firstWindow();
+  page.setDefaultTimeout(20000);
   page.on('pageerror',error=>errors.push(error.message));
   await page.getByRole('main',{name:'Espacio de trabajo',exact:true}).waitFor();
+  assert.equal(await page.getByText('PG',{exact:true}).count(),0,'The header PG avatar is removed');
   const packageInfo = JSON.parse(await readFile(path.join(root,'package.json'),'utf8'));
   await page.locator('.bottom-meta').getByText(`v${packageInfo.displayVersion || packageInfo.version}`,{exact:true}).waitFor();
   await page.getByRole('button',{name:'Probar con un ejemplo'}).click();
@@ -166,19 +168,62 @@ try {
   assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');
   await page.screenshot({path:path.join(output,'PhoneGest-Barcode-Studio-oscuro.png'),fullPage:true});
   await page.getByRole('button',{name:'Cambiar a modo claro'}).click();
+  const canvas = page.locator('.preview-canvas');
+  const sheet = page.locator('.page-wrapper');
+  const zoomValue = async () => Number((await page.locator('.zoom-controls').innerText()).match(/(\d+)%/)[1]);
+  const initialZoom = await zoomValue();
+  const canvasBounds = await canvas.boundingBox();
+  const center = { x: canvasBounds.x + canvasBounds.width / 2, y: canvasBounds.y + canvasBounds.height / 2 };
+  await page.mouse.move(center.x,center.y);
+  await page.mouse.wheel(0,-240);
+  await page.waitForFunction(value => Number(document.querySelector('.zoom-controls').innerText.match(/(\d+)%/)[1]) > value,initialZoom);
+  const beforeDrag = await sheet.getAttribute('style');
+  await page.mouse.down();
+  await page.mouse.move(center.x+85,center.y+45,{steps:6});
+  await page.mouse.up();
+  assert.notEqual(await sheet.getAttribute('style'),beforeDrag,'Dragging the sheet pans it inside the workspace');
+  await page.getByRole('button',{name:'Ajustar',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelector('.page-wrapper').style.transform.includes('0px'));
+  assert.equal(await zoomValue(),initialZoom,'Fit restores the centered page at its original scale');
   await application.evaluate(({dialog},directory)=>{
-    dialog.showSaveDialog = async (_window,options)=>({canceled:false,filePath:`${directory}/${options.title==='Guardar PDF'?'ui-export.pdf':'ui-project.pgbs'}`});
+    dialog.showSaveDialog = async (_window,options)=>{globalThis.uiSaveOptions=options;return {canceled:false,filePath:`${directory}/${options.title==='Guardar PDF'?'ui-export.pdf':options.title?.includes('ZIP')?'ui-images.zip':'ui-project.pgbs'}`};};
     dialog.showOpenDialog = async (_window,options)=>({canceled:false,filePaths:[`${directory}/${options.title==='Abrir proyecto'?'ui-project.pgbs':'images'}`]});
   },exportDir.replaceAll('\\','/'));
+  await page.getByRole('button',{name:'Configuración',exact:true}).click();
+  const settingsDialog = page.getByRole('dialog',{name:'Hazlo a tu medida'});
+  assert.equal(await settingsDialog.getByRole('button',{name:'Liquid Glass',exact:true}).count(),0,'Liquid Glass is no longer offered');
+  await settingsDialog.getByText(/ImPaul/).first().waitFor();
+  const firstNumber = settingsDialog.getByRole('spinbutton',{name:'Empezar por el número',exact:true});
+  await firstNumber.fill('');
+  assert.equal(await firstNumber.inputValue(),'','The starting number can be fully cleared while editing');
+  await firstNumber.fill('12');
+  await firstNumber.blur();
+  assert.equal(await firstNumber.inputValue(),'12');
+  await firstNumber.fill('');
+  await firstNumber.blur();
+  assert.equal(await firstNumber.inputValue(),'12','An empty number draft restores the valid value on blur');
+  await firstNumber.fill('1');
+  await firstNumber.blur();
+  await settingsDialog.getByRole('textbox',{name:'Nombre del archivo',exact:true}).fill('phonegest-{total}-{inicio}.pdf');
+  await page.screenshot({path:path.join(output,'PhoneGest-Barcode-Studio-configuracion.png'),fullPage:true});
+  await settingsDialog.getByRole('button',{name:'Listo',exact:true}).click();
   await page.getByRole('button',{name:'Generar PDF'}).click();
   await page.getByText('PDF guardado correctamente.',{exact:true}).waitFor();
   assert.equal((await readFile(path.join(exportDir,'ui-export.pdf'))).subarray(0,5).toString(),'%PDF-');
+  assert.match(await application.evaluate(()=>globalThis.uiSaveOptions.defaultPath),/phonegest-3-1\.pdf$/,'PDF suggestion resolves filename variables');
   await page.getByRole('button',{name:'Guardar proyecto',exact:true}).click();
   await page.getByText('Proyecto guardado. Podrás continuar más tarde.',{exact:true}).waitFor();
   assert.equal(JSON.parse(await readFile(path.join(exportDir,'ui-project.pgbs'),'utf8')).codes.length,3);
-  await page.getByRole('button',{name:'Exportar imágenes'}).click();
+  await page.getByRole('button',{name:'Exportar imágenes',exact:true}).click();
+  await page.screenshot({path:path.join(output,'PhoneGest-Barcode-Studio-export-options.png'),fullPage:true});
+  await page.getByRole('menuitem',{name:'Guardar imágenes sueltas',exact:false}).click();
   await page.getByText('3 imágenes guardadas.',{exact:true}).waitFor();
   assert.equal((await readdir(path.join(exportDir,'images'))).filter(name=>name.endsWith('.png')).length,3);
+  await page.getByRole('button',{name:'Exportar imágenes',exact:true}).click();
+  await page.getByRole('menuitem',{name:'Guardar imágenes en ZIP',exact:false}).click();
+  await page.getByText('3 imágenes guardadas.',{exact:true}).waitFor();
+  await page.waitForFunction(()=>!document.querySelector('.export-actions button:disabled'));
+  assert.equal((await readFile(path.join(exportDir,'ui-images.zip'))).subarray(0,2).toString(),'PK');
   const input = page.getByRole('textbox',{name:'Códigos separados por saltos de línea'});
   await input.fill('CODIGO-VÁLIDO');
   await page.getByRole('button',{name:'Añadir códigos'}).click();
@@ -202,30 +247,37 @@ try {
   await page.locator('.code-row').first().hover();
   await page.getByRole('button',{name:'Editar código 1',exact:true}).click();
   await page.getByRole('textbox',{name:'Identificador',exact:true}).fill('EDITADO-123');
+  await page.getByRole('textbox',{name:'Fecha del código',exact:true}).fill('31/02/2026');
+  await page.getByRole('button',{name:'Guardar cambio',exact:true}).click();
+  await page.getByRole('dialog').getByRole('alert').waitFor();
+  await page.getByRole('textbox',{name:'Fecha del código',exact:true}).fill('09/11/2026');
   await page.getByRole('button',{name:'Guardar cambio',exact:true}).click();
   assert.equal(await frame.locator('.identifier').first().textContent(),'EDITADO-123');
+  assert.deepEqual(await frame.locator('.label-date').allTextContents(),['09/11/2026']);
   await page.locator('.code-row').first().hover();
   await page.getByRole('button',{name:'Bajar código 1',exact:true}).click();
   assert.equal(await frame.locator('.identifier').first().textContent(),'L3A5KA9806994140129590X');
+  assert.equal(await frame.locator('.label').nth(1).locator('.label-date').textContent(),'09/11/2026','A date follows its code when reordered');
   await page.locator('.code-row').first().hover();
   await page.getByRole('button',{name:'Eliminar código 1',exact:true}).click();
   assert.equal(await page.locator('.code-row').count(),4);
   await page.getByRole('button',{name:'Deshacer último cambio',exact:true}).click();
   assert.equal(await page.locator('.code-row').count(),5);
+  assert.equal(await frame.locator('.label').nth(1).locator('.label-date').textContent(),'09/11/2026','Undo restores codes with their individual dates');
   await page.getByRole('combobox',{name:'Formato del documento'}).click();
-  await page.getByRole('option',{name:'Compacto · 7 por página',exact:true}).click();
+  await page.getByRole('option',{name:'7 por página',exact:true}).click();
   await page.getByText('Página 1 de 1',{exact:true}).waitFor();
   const preview = page.locator('iframe[title*="documento A4"]');
   const a4BeforeTheme = await preview.getAttribute('srcdoc');
-  await chooseAppearance(page,'Liquid Glass','liquid-glass');
-  assert.equal(await preview.getAttribute('srcdoc'),a4BeforeTheme,'Liquid Glass must not change the vector A4 document');
+  await chooseAppearance(page,'Oscuro','dark');
+  assert.equal(await preview.getAttribute('srcdoc'),a4BeforeTheme,'Theme changes must not affect the vector A4 document');
   assert.equal(await frame.locator('section.page').evaluate(paper=>getComputedStyle(paper).backgroundColor),'rgb(255, 255, 255)');
-  await page.screenshot({path:path.join(output,'PhoneGest-Barcode-Studio-liquid-glass.png'),fullPage:true});
+  await page.screenshot({path:path.join(output,'PhoneGest-Barcode-Studio-workspace.png'),fullPage:true});
   await input.fill('BORRADOR-LOCAL');
   const sessionFile = path.join(userData,'session.json');
   let persisted = JSON.parse(await readFile(sessionFile,'utf8'));
   const saveDeadline = Date.now() + 5000;
-  while ((persisted.input!=='BORRADOR-LOCAL' || persisted.theme!=='liquid-glass') && Date.now()<saveDeadline) {
+  while ((persisted.input!=='BORRADOR-LOCAL' || persisted.theme!=='dark') && Date.now()<saveDeadline) {
     await delay(50);
     persisted = JSON.parse(await readFile(sessionFile,'utf8'));
   }
@@ -233,13 +285,14 @@ try {
   assert.equal(persisted.input,'BORRADOR-LOCAL');
   assert.equal(persisted.settings.layout,'compact');
   assert.equal(persisted.settings.showNumbers,false);
-  assert.equal(persisted.theme,'liquid-glass');
+  assert.equal(persisted.theme,'dark');
+  assert.deepEqual(persisted.dates,['','2026-11-09','','','']);
   const blocked = await page.evaluate(async()=>{try{await fetch('https://example.com/phonegest-privacy-check');return false;}catch{return true;}});
   assert.equal(blocked,true);
   await page.reload();
   await page.getByText('5 códigos listos para exportar',{exact:true}).waitFor();
   assert.equal(await input.inputValue(),'BORRADOR-LOCAL');
-  await page.locator('html[data-theme="liquid-glass"]').waitFor({state:'attached'});
+  await page.locator('html[data-theme="dark"]').waitFor({state:'attached'});
   await page.getByRole('button',{name:'Abrir proyecto',exact:true}).click();
   await page.getByText('Proyecto abierto correctamente.',{exact:true}).waitFor();
   assert.equal(await page.locator('.code-row').count(),3);
@@ -249,5 +302,5 @@ try {
   await page.getByText('Todavía no hay códigos',{exact:true}).waitFor();
   assert.equal(await page.getByRole('button',{name:'Generar PDF'}).isDisabled(),true);
   assert.deepEqual(errors,[]);
-  console.log(JSON.stringify({success:true,checks:['paste and add','live vector preview','light and dark theme','Liquid Glass preserves white A4 preview and restores after reload','PDF export via IPC','project save and open via IPC','branded PNG export via IPC','invalid input retained','multi-page navigation','themed selector contrast and popup visibility','selector click, keyboard, focus and modal dismissal','toolbar/settings layout synchronization','checkbox and number toggles','edit','reorder','delete and undo','format switch','session restoration','local draft','network denied','clear confirmation'],screenshots:output},null,2));
+  console.log(JSON.stringify({success:true,checks:['paste and add','live vector preview','light and dark theme without Liquid Glass','mouse wheel zoom, pointer pan and fit reset','editable and clearable starting number draft','creator credits in settings','PDF filename variables via IPC','project save and open via IPC','branded PNG folder and ZIP exports via IPC','invalid input retained','multi-page navigation','themed selector contrast and popup visibility','selector click, keyboard, focus and modal dismissal','toolbar/settings layout synchronization and disabled future columns','checkbox and number toggles','individual date validation and rendering','date follows edit, reorder, deletion and undo','format switch','session restoration with dates','local draft','network denied','clear confirmation'],screenshots:output},null,2));
 } finally {await application?.close();}

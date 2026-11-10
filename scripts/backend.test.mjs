@@ -30,8 +30,32 @@ test('local session keeps draft and theme while removing unknown fields', () => 
   assert.equal(session.theme, 'dark');
   assert.equal(session.input, 'pending');
   assert.equal(Object.hasOwn(session, 'injected'), false);
-  assert.equal(validateSession({ ...session, theme: 'liquid-glass' }).theme, 'liquid-glass');
+  assert.equal(validateSession({ ...session, theme: 'liquid-glass' }).theme, 'dark');
   assert.equal(validateSession({ ...session, theme: 'unrecognized-theme' }).theme, 'light');
+});
+
+test('project dates and filename templates round trip while old projects migrate without dates', () => {
+  const payload = { codes: ['DUPLICATE', 'DUPLICATE', 'LAST'], dates: ['10/11/2026', '2026-11-11', ''], settings: { filenameTemplate: 'lote-{total}-{fecha}.pdf', documentTitle: 'Paquetes {inicio}-{final}' } };
+  const project = createProject(payload);
+  assert.deepEqual(readProject(JSON.parse(JSON.stringify(project))).dates, ['2026-11-10', '2026-11-11', '']);
+  assert.equal(readProject(project).settings.filenameTemplate, payload.settings.filenameTemplate);
+  const legacy = { ...project };
+  delete legacy.dates;
+  delete legacy.settings.filenameTemplate;
+  assert.deepEqual(readProject(legacy).dates, ['', '', '']);
+  assert.equal(readProject(legacy).settings.filenameTemplate, 'phonegest-barcodes-{total}-{fecha}');
+  const reordered = validatePayload({ ...payload, codes: ['LAST', 'DUPLICATE', 'DUPLICATE'], dates: ['', '2026-11-11', '2026-11-10'] });
+  assert.deepEqual(reordered.dates, ['', '2026-11-11', '2026-11-10']);
+  assert.deepEqual(validateSession({ ...payload, theme: 'liquid-glass' }).dates, ['2026-11-10', '2026-11-11', '']);
+});
+
+test('desktop boundary rejects date alignment, invalid dates and unknown filename/title variables', () => {
+  for (const dates of [null, '2026-11-10', ['2026-02-30'], ['2026-11-10', ''], [false]]) {
+    assert.throws(() => validatePayload({ ...valid, dates }));
+  }
+  for (const settings of [{ filenameTemplate: '{unknown}' }, { documentTitle: '{unknown}' }, { filenameTemplate: 'a\nb' }, { filenameTemplate: 'A'.repeat(181) }, { documentTitle: 'A'.repeat(241) }]) {
+    assert.throws(() => validatePayload({ ...valid, settings }));
+  }
 });
 
 test('production blocks network and files outside the bundled app', () => {

@@ -1,9 +1,10 @@
 appId: es.phonegest.barcode-studio
 productName: PhoneGest Barcode Studio
+copyright: Copyright © 2026 ImPaul
 asar: true
 compression: normal
 releaseInfo:
-  releaseName: 1.0.5
+  releaseName: 1.0.6
 publish:
   provider: github
   owner: ImPaul17
@@ -39,11 +40,14 @@ win:
   signExecutable: false
   verifyUpdateCodeSignature: false
 nsis:
+  include: assets/installer/phonegest-installer.nsh
+  installerSidebar: assets/installer/sidebar.bmp
+  uninstallerSidebar: assets/installer/sidebar.bmp
   artifactName: PhoneGest-Barcode-Studio-${version}-Instalador.${ext}
   oneClick: false
   allowToChangeInstallationDirectory: true
   perMachine: false
-  allowElevation: false
+  allowElevation: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: PhoneGest Barcode Studio

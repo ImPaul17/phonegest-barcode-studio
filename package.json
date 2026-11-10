@@ -1,9 +1,9 @@
 {
   "name": "phonegest-barcode-studio",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "private": true,
   "description": "Generador offline de códigos de barras para uso interno de PhoneGest",
-  "author": "PhoneGest",
+  "author": { "name": "ImPaul", "url": "https://github.com/ImPaul17" },
   "license": "UNLICENSED",
   "repository": {
     "type": "git",
@@ -36,7 +36,6 @@
     "electron-updater": "^6.8.11",
     "fflate": "0.8.3",
     "jsbarcode": "^3.12.1",
-    "liquid-glass-react": "1.1.1",
     "lucide-react": "^0.468.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

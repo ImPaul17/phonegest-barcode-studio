@@ -1,5 +1,6 @@
 import JsBarcode from 'jsbarcode';
 import { escapeHtml, safeLogoDataUrl, validateCode } from './model.mjs';
+import { formatDate, normalizeDates } from './metadata.mjs';
 
 export const MIN_MODULE_WIDTH_MM = 0.28;
 export const QUIET_ZONE_MODULES = 12;
@@ -56,17 +57,22 @@ export function createLabelSvg(value, options = {}) {
   const showNumbers = options.showNumbers !== false;
   const showCheckboxes = options.showCheckboxes !== false;
   const showText = options.showText !== false;
+  const date = formatDate(normalizeDates([options.date ?? ''], 1)[0]);
   const number = Number.isSafeInteger(Number(options.number)) && Number(options.number) >= 1 ? Number(options.number) : 1;
   const logo = safeLogoDataUrl(options.logoDataUrl);
   const headerHeightMm = logo ? 13 : 0;
   const leftSpace = showNumbers ? 15 : 4;
   const rightSpace = showCheckboxes ? 12 : 4;
   const barcodeArea = widthMm - leftSpace - rightSpace;
-  const barHeightMm = Math.max(10, heightMm - headerHeightMm - (showText ? 13 : 6));
+  const barHeightMm = Math.max(10, heightMm - headerHeightMm - (showText || date ? 13 : 6));
   const barcode = createBarcodeSvg(value, { maxWidthMm: barcodeArea, barHeightMm });
   const barcodeWidth = Number(barcode.match(/width="([\d.]+)mm"/)[1]);
   const x = leftSpace + (barcodeArea - barcodeWidth) / 2;
   const y = headerHeightMm + 3;
   const nestedSvg = barcode.replace('<svg ', `<svg x="${x}" y="${y}" `).replace(`width="${barcodeWidth}mm"`, `width="${barcodeWidth}"`).replace(/height="([\d.]+)mm"/, 'height="$1"');
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${widthMm}mm" height="${heightMm}mm" viewBox="0 0 ${widthMm} ${heightMm}" role="img" aria-label="${escapeHtml(value)}"><rect width="${widthMm}" height="${heightMm}" fill="#fff"/>${logo ? `<image href="${logo}" x="${widthMm / 2 - 24}" y="1" width="48" height="10" preserveAspectRatio="xMidYMid meet"/>` : ''}${showNumbers ? `<text x="2" y="${headerHeightMm + barHeightMm / 2 + 4}" fill="#000" font-family="Arial, sans-serif" font-size="3.5">${number}.</text>` : ''}${nestedSvg}${showText ? `<text x="${leftSpace + barcodeArea / 2}" y="${headerHeightMm + barHeightMm + 9}" fill="#000" text-anchor="middle" font-family="Arial, sans-serif" font-size="3.8">${escapeHtml(value)}</text>` : ''}${showCheckboxes ? `<rect x="${widthMm - 8}" y="${headerHeightMm + barHeightMm / 2 + 0.5}" width="5" height="5" fill="#fff" stroke="#000" stroke-width="0.4"/>` : ''}</svg>`;
+  const textLeft = date ? 32 : leftSpace;
+  const textRight = widthMm - rightSpace;
+  const textSize = Math.min(3.8, (textRight - textLeft) / value.length / 0.95);
+  const dateText = date ? `<text class="label-date" x="4" y="${headerHeightMm + barHeightMm + 9}" fill="#000" font-family="Arial, sans-serif" font-size="3.2">${date}</text>` : '';
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${widthMm}mm" height="${heightMm}mm" viewBox="0 0 ${widthMm} ${heightMm}" role="img" aria-label="${escapeHtml(value)}"><rect width="${widthMm}" height="${heightMm}" fill="#fff"/>${logo ? `<image href="${logo}" x="${widthMm / 2 - 24}" y="1" width="48" height="10" preserveAspectRatio="xMidYMid meet"/>` : ''}${showNumbers ? `<text x="2" y="${headerHeightMm + barHeightMm / 2 + 4}" fill="#000" font-family="Arial, sans-serif" font-size="3.5">${number}.</text>` : ''}${nestedSvg}${dateText}${showText ? `<text x="${textLeft + (textRight - textLeft) / 2}" y="${headerHeightMm + barHeightMm + 9}" fill="#000" text-anchor="middle" font-family="Arial, sans-serif" font-size="${textSize}">${escapeHtml(value)}</text>` : ''}${showCheckboxes ? `<rect x="${widthMm - 8}" y="${headerHeightMm + barHeightMm / 2 + 0.5}" width="5" height="5" fill="#fff" stroke="#000" stroke-width="0.4"/>` : ''}</svg>`;
 }

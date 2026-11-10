@@ -77,6 +77,8 @@ for (const entry of cases) {
         assert.ok(text.includes(pageCodes[row]), `${entry.file}: identificador legible en texto PDF`);
         const number = (pageNumber - 1) * 4 + row + 1;
         assert.ok(text.includes(`${number}.`), `${entry.file}: numeración continua ${number}`);
+        const date = ['10/11/2026', '', '09/11/2026'][(number - 1) % 3];
+        if (date) assert.ok(text.includes(date), `${entry.file}: fecha individual legible en PDF`);
         decoded.push(value);
       }
       if (entry.file === 'PhoneGest-ejemplo.pdf') {

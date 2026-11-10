@@ -1,4 +1,4 @@
-import { normalizeSettings, validateCode } from '../shared/index.mjs';
+import { normalizeDates, normalizeSettings, resolveTemplate, validateCode } from '../shared/index.mjs';
 
 export const PROJECT_APPLICATION = 'phonegest-barcode-studio';
 export const PROJECT_VERSION = 1;
@@ -22,6 +22,7 @@ export function validatePayload(value, { allowEmpty = false } = {}) {
     if (!checked.valid) throw new Error(`Código ${index + 1}: ${checked.error || 'identificador no válido'}`);
     return code;
   });
+  const dates = normalizeDates(value.dates, codes.length);
   const inputSettings = isRecord(value.settings) ? value.settings : {};
   if (inputSettings.layout !== undefined && !['compact', 'comfortable', 'large'].includes(inputSettings.layout)) {
     throw new Error('La distribución del documento no es válida.');
@@ -34,15 +35,21 @@ export function validatePayload(value, { allowEmpty = false } = {}) {
       throw new Error('La configuración del documento no es válida.');
     }
   }
-  if (inputSettings.documentTitle !== undefined && (typeof inputSettings.documentTitle !== 'string' || inputSettings.documentTitle.length > 120 || /[\u0000-\u001f\u007f]/.test(inputSettings.documentTitle))) {
-    throw new Error('El título debe tener un máximo de 120 caracteres y una sola línea.');
+  if (inputSettings.documentTitle !== undefined && (typeof inputSettings.documentTitle !== 'string' || inputSettings.documentTitle.length > 240 || /[\u0000-\u001f\u007f]/.test(inputSettings.documentTitle))) {
+    throw new Error('El título debe tener un máximo de 240 caracteres y una sola línea.');
   }
-  return { codes, settings: normalizeSettings(inputSettings) };
+  if (inputSettings.filenameTemplate !== undefined && (typeof inputSettings.filenameTemplate !== 'string' || inputSettings.filenameTemplate.length > 180 || /[\u0000-\u001f\u007f]/.test(inputSettings.filenameTemplate))) {
+    throw new Error('El nombre del archivo debe tener un máximo de 180 caracteres y una sola línea.');
+  }
+  const settings = normalizeSettings(inputSettings);
+  resolveTemplate(settings.documentTitle, { codes, settings });
+  resolveTemplate(settings.filenameTemplate, { codes, settings });
+  return { codes, dates, settings };
 }
 
 export function validateSession(value) {
   const payload = validatePayload(value, { allowEmpty: true });
-  const theme = ['light', 'dark', 'system', 'liquid-glass'].includes(value.theme) ? value.theme : 'light';
+  const theme = value.theme === 'liquid-glass' ? 'dark' : ['light', 'dark', 'system'].includes(value.theme) ? value.theme : 'light';
   const input = typeof value.input === 'string' && value.input.length <= 256000 ? value.input : '';
   return { ...payload, theme, input };
 }

@@ -176,6 +176,10 @@ try {
 
   await page.getByRole('button', { name: 'Probar con un ejemplo' }).click();
   await page.getByRole('button', { name: 'Añadir códigos' }).click();
+  await page.locator('.code-row').first().hover();
+  await page.getByRole('button', { name: 'Editar código 1', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Fecha del código', exact: true }).fill('10/11/2026');
+  await page.getByRole('button', { name: 'Guardar cambio', exact: true }).click();
   const input = page.getByRole('textbox', { name: 'Códigos separados por saltos de línea' });
   await input.fill('BORRADOR-PENDIENTE');
   await setState({ status: 'downloaded', progress: 100 });
@@ -187,6 +191,8 @@ try {
   assert.equal(calls[installIndex - 1].method, 'save');
   assert.equal(calls[installIndex - 1].session.input, 'BORRADOR-PENDIENTE');
   assert.equal(calls[installIndex - 1].session.codes.length, 3);
+  assert.deepEqual(calls[installIndex - 1].session.dates, ['2026-11-10', '', ''], 'Update restart preserves individual code dates');
+  assert.equal(calls[installIndex - 1].session.settings.filenameTemplate, 'phonegest-barcodes-{total}-{fecha}', 'Update restart preserves export filename settings');
 
   await application.evaluate(() => { globalThis.phonegestFixture.failSave = true; });
   await banner.getByRole('button', { name: 'Reiniciar e instalar', exact: true }).click();
