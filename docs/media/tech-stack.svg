@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="358" height="34" viewBox="0 0 358 34">
+  <g font-family="system-ui, Segoe UI, Arial, sans-serif" font-size="12" font-weight="650" fill="#F4F9FC">
+    <g>
+      <rect x=".5" y=".5" width="76" height="33" rx="7" fill="#142B43" stroke="#51748E"/>
+      <g transform="translate(16 17)" fill="none" stroke="#61DAFB" stroke-width="1">
+        <ellipse rx="8" ry="3"/>
+        <ellipse rx="8" ry="3" transform="rotate(60)"/>
+        <ellipse rx="8" ry="3" transform="rotate(-60)"/>
+        <circle r="1.25" fill="#61DAFB" stroke="none"/>
+      </g>
+      <text x="31" y="21">React</text>
+    </g>
+    <g transform="translate(84)">
+      <rect x=".5" y=".5" width="106" height="33" rx="7" fill="#142B43" stroke="#51748E"/>
+      <rect x="9" y="9" width="16" height="16" rx="3" fill="#3178C6"/>
+      <text x="17" y="20.5" text-anchor="middle" font-size="8" fill="#FFF">TS</text>
+      <text x="32" y="21">TypeScript</text>
+    </g>
+    <g transform="translate(198)">
+      <rect x=".5" y=".5" width="64" height="33" rx="7" fill="#142B43" stroke="#51748E"/>
+      <path d="M9 10l8 15 8-15-8 2z" fill="#9F83FF"/>
+      <path d="M20 7l-6 11h4l-1 5 6-10h-4z" fill="#FFE27A"/>
+      <text x="32" y="21">Vite</text>
+    </g>
+    <g transform="translate(270)">
+      <rect x=".5" y=".5" width="87" height="33" rx="7" fill="#142B43" stroke="#51748E"/>
+      <circle cx="16.5" cy="17" r="7" fill="none" stroke="#9FEAF9" stroke-width="1.2"/>
+      <circle cx="16.5" cy="17" r="2" fill="#9FEAF9"/>
+      <circle cx="21.8" cy="12.5" r="1.65" fill="#9FEAF9"/>
+      <text x="30" y="21">Electron</text>
+    </g>
+  </g>
+</svg>

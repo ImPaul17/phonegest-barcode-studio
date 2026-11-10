@@ -137,7 +137,9 @@ La sesión incluye el lote, el borrador, la configuración y el tema. En Windows
 
 ## Tecnologías
 
-La interfaz de **React, TypeScript y Vite** se comparte entre el navegador y la aplicación de **Electron**.
+![React, TypeScript, Vite y Electron](docs/media/tech-stack.svg)
+
+Ambas ediciones comparten la interfaz y el motor de etiquetas Code 128.
 
 <details>
 <summary><strong>Ver todas las tecnologías</strong></summary>
@@ -154,9 +156,11 @@ La interfaz de **React, TypeScript y Vite** se comparte entre el navegador y la 
 
 ## Desarrollo
 
-Con **Node.js 24** y npm, instala las dependencias y levanta la edición que quieras probar.
+Necesitas **Git**, **Node.js 24** y **npm**. Clona el repositorio y arranca la edición web en local.
 
 ```bash
+git clone https://github.com/ImPaul17/phonegest-barcode-studio.git
+cd phonegest-barcode-studio
 npm ci
 npm run dev:web
 ```
