@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="195" height="44" viewBox="0 0 195 44">
+  <defs>
+    <linearGradient id="button" x1="0" y1="0" x2="195" y2="44" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#005784"/>
+      <stop offset="1" stop-color="#006B70"/>
+    </linearGradient>
+  </defs>
+  <rect x=".5" y=".5" width="194" height="43" rx="10" fill="url(#button)" stroke="#399EB1"/>
+  <g fill="none" stroke="#DDF7FC" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="15.5" y="14" width="19" height="16" rx="2.5"/>
+    <path d="M15.5 19h19m-14.5-2.5h.1m3.2 0h.1"/>
+  </g>
+  <text x="112" y="22.5" dominant-baseline="central" text-anchor="middle" fill="#FFF" font-family="system-ui, Segoe UI, Arial, sans-serif" font-size="13.5" font-weight="650">Abrir edición web</text>
+</svg>
