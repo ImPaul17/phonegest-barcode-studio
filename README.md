@@ -93,7 +93,7 @@ Para Windows 10/11 x64, elige un archivo de [GitHub Releases](https://github.com
 
 Ambas ediciones guardan PDF y PNG desde la aplicación.
 
-Para cambiar de disco después de instalar, abre **Configuración → Ubicación de la aplicación → Cambiar ubicación**. Se guarda la sesión y se abre el asistente de la misma versión para elegir el nuevo destino. Los ajustes permanecen en `%APPDATA%` y los proyectos externos conservan su ubicación. La primera verificación del instalador requiere conexión; si la copia del instalador no está en caché, se pide seleccionar el instalador original de esa versión. También puedes ejecutarlo manualmente y elegir otra carpeta.
+Para cambiar de disco después de instalar, abre **Configuración → Ubicación de la aplicación → Cambiar ubicación**. Se guarda la sesión y se abre el asistente de la misma versión para elegir el nuevo destino. Los ajustes permanecen en `%APPDATA%` y los proyectos externos conservan su ubicación. El instalador registra su propia comprobación SHA-512 para verificar la copia en caché **sin conexión**; si falta esa copia, se pide seleccionar el instalador original. En instalaciones sin ese registro, la verificación de recuperación usa GitHub. También puedes ejecutar el instalador manualmente y elegir otra carpeta.
 
 **Si tienes la [revisión B histórica](https://github.com/ImPaul17/phonegest-barcode-studio/releases/tag/v1.0.4b)**, instala manualmente la nueva versión. El ejecutable de la B usaba el número interno `1.0.5` y no distingue esta publicación. Las revisiones con letras se reconocen desde la C. Los ejecutables actuales no tienen firma digital, por lo que Windows puede mostrar un aviso de editor desconocido.
 

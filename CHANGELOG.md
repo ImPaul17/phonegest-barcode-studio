@@ -11,6 +11,6 @@
 - Distribuciones 2, 4 y 7 por página. Opción por columnas marcada como próximamente.
 - Créditos de ImPaul en la aplicación, el instalador y el repositorio.
 - Asistente de instalación oscuro, con elección de carpeta/disco y acceso directo al escritorio.
-- Cambio de ubicación desde Configuración mediante el instalador verificado de la misma versión, guardando antes la sesión.
+- Cambio de ubicación desde Configuración mediante el instalador verificado de la misma versión, guardando antes la sesión. El asistente registra el hash de su copia para permitir el cambio sin conexión desde la primera instalación.
 
-La generación de códigos continúa funcionando sin conexión. Las actualizaciones y la primera verificación del instalador para cambiar de ubicación usan GitHub; nunca envían los identificadores.
+La generación de códigos continúa funcionando sin conexión. Las actualizaciones y la recuperación de un registro de instalador ausente usan GitHub; nunca envían los identificadores.

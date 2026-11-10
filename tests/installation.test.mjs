@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { mkdtemp, mkdir, readFile, writeFile, readdir, rm } from 'node:fs/promises';
-import { installationMetadataUrl, parseInstallerMetadata, verifyInstallerFile, createInstallationManager } from '../electron/installation.mjs';
+import { installationMetadataUrl, parseInstallerMetadata, parseInstalledReceipt, verifyInstallerFile, createInstallationManager } from '../electron/installation.mjs';
 
 const version = '1.0.5';
 const installerName = `PhoneGest-Barcode-Studio-${version}-Instalador.exe`;
@@ -53,6 +53,19 @@ test('relocation saves the session and opens only a verified private installer c
   const offline = createInstallationManager({ ...options, fetchText: async () => { throw new Error('offline'); } });
   await offline.changeLocation();
   assert.deepEqual(events, ['saved', 'launch', 'quit', 'saved', 'launch', 'quit']);
+});
+
+test('an installer receipt verifies relocation offline from the first installation, without any network request', async (context) => {
+  const result = await setup(context, { fetchText: async () => { throw new Error('Network must not be used'); } });
+  const receiptDirectory = path.join(result.options.directory, 'resources');
+  await mkdir(receiptDirectory, { recursive: true });
+  const receipt = JSON.stringify({ version, filename: installerName, sha512Hex: createHash('sha512').update(fixture).digest('hex') });
+  assert.equal(parseInstalledReceipt(receipt, version).sha512, sha512);
+  assert.throws(() => parseInstalledReceipt(receipt, '1.0.6'));
+  assert.throws(() => parseInstalledReceipt(receipt.replace(/sha512Hex/, 'invalid'), version));
+  await writeFile(path.join(receiptDirectory, 'phonegest-installer.json'), receipt);
+  await result.manager.changeLocation();
+  assert.deepEqual(result.events, ['saved', 'launch', 'quit']);
 });
 
 test('wrong cached installer falls back to selecting the exact verified installer', async (context) => {

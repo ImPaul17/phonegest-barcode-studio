@@ -39,6 +39,25 @@
   !macroend
 
   !macro customInstall
+    ; Record this running installer's hash after extraction. This avoids a circular
+    ; build-time hash inside app.asar and lets relocation work completely offline.
+    Push $0
+    Push $1
+    Push $2
+    ${StdUtils.HashFile} $0 "SHA2-512" "$EXEPATH"
+    StrLen $1 $0
+    ${If} $1 == 128
+      ClearErrors
+      FileOpen $2 "$INSTDIR\resources\phonegest-installer.json" w
+      ${IfNot} ${Errors}
+        FileWrite $2 '{"version":"${VERSION}","filename":"PhoneGest-Barcode-Studio-${VERSION}-Instalador.exe","sha512Hex":"$0"}'
+        FileClose $2
+      ${EndIf}
+    ${EndIf}
+    ClearErrors
+    Pop $2
+    Pop $1
+    Pop $0
     ; Automatic updates preserve the existing desktop shortcut preference.
     ${IfNot} ${Silent}
     ${AndIfNot} ${isUpdated}

@@ -84,6 +84,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node scripts/release-validation.mjs release
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & ./scripts/installer-integration.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $executables = @(
             'release/win-unpacked/PhoneGest Barcode Studio.exe',
             "release/PhoneGest-Barcode-Studio-$env:RELEASE_VERSION-Instalador.exe",

@@ -65,6 +65,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node scripts/release-validation.mjs release
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & ./scripts/installer-integration.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
           $previewSmoke = Join-Path $env:GITHUB_WORKSPACE 'build/preview-packaged-smoke'
           $previewExe = Join-Path $env:GITHUB_WORKSPACE 'release/win-unpacked/PhoneGest Barcode Studio.exe'
@@ -84,6 +86,7 @@ jobs:
             release/*-Portable.exe
             release/latest.yml
             release/release-validation.json
+            build/installer-integration.json
           retention-days: 14
           compression-level: 0
           if-no-files-found: error

@@ -40,6 +40,14 @@ export function parseInstallerMetadata(text, version) {
   return validateInstallerMetadata(yaml.load(text, { schema: yaml.JSON_SCHEMA }), version);
 }
 
+/** Written next to app.asar by the running installer, after its files are extracted. */
+export function parseInstalledReceipt(text, version) {
+  if (typeof text !== 'string' || Buffer.byteLength(text) > MAX_METADATA_BYTES) throw new TypeError('Los datos locales del instalador no son válidos.');
+  const value = JSON.parse(text);
+  if (typeof value?.sha512Hex !== 'string' || !/^[a-f0-9]{128}$/i.test(value.sha512Hex)) throw new TypeError('Falta la comprobación del instalador local.');
+  return validateInstallerMetadata({ ...value, sha512: Buffer.from(value.sha512Hex, 'hex').toString('base64') }, version);
+}
+
 export async function verifyInstallerFile(filename, metadata) {
   const info = await stat(filename);
   if (!info.isFile() || info.size <= 0 || info.size > 2 ** 31 || (metadata.size !== undefined && info.size !== metadata.size)) {
@@ -62,6 +70,11 @@ export function createInstallationManager({
   let changing = null;
 
   async function getMetadata() {
+    try {
+      const receipt = path.join(directory, 'resources', 'phonegest-installer.json');
+      if ((await stat(receipt)).size > MAX_METADATA_BYTES) throw new Error();
+      return parseInstalledReceipt(await readFile(receipt, 'utf8'), version);
+    } catch { /* Older or damaged installations can verify their original installer using GitHub. */ }
     try {
       const metadata = parseInstallerMetadata(await fetchText(installationMetadataUrl(version)), version);
       await mkdir(maintenanceDirectory, { recursive: true });
@@ -112,7 +125,7 @@ export function createInstallationManager({
     getInfo: () => ({
       installed: Boolean(installed), path: directory, canChangeLocation: Boolean(installed),
       reason: installed
-        ? 'Se abrirá el asistente para elegir otra carpeta o disco. Se conservarán tus ajustes y proyectos. La primera comprobación del instalador necesita Internet.'
+        ? 'Se guardará la sesión y se abrirá el asistente para elegir otra carpeta o disco. La copia local del instalador se verifica sin conexión. Si falta, se pedirá seleccionar el instalador original.'
         : unsupportedReason,
     }),
     changeLocation: async () => {
