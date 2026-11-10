@@ -1,7 +1,6 @@
 {
   "name": "phonegest-barcode-studio",
-  "version": "1.0.5",
-  "displayVersion": "1.0.4b",
+  "version": "1.0.4c",
   "private": true,
   "description": "Generador offline de códigos de barras para uso interno de PhoneGest",
   "author": "PhoneGest",
@@ -25,8 +24,8 @@
     "test:png": "node tests/png-integration.mjs",
     "notices": "node scripts/update-notices.mjs",
     "release:validate": "node scripts/release-validation.mjs",
-    "package": "npm run build && electron-builder --win nsis portable --x64",
-    "package:dir": "npm run build && electron-builder --win --dir --x64"
+    "package": "npm run build && electron-builder --config electron-builder.config.cjs --win nsis portable --x64",
+    "package:dir": "npm run build && electron-builder --config electron-builder.config.cjs --win --dir --x64"
   },
   "dependencies": {
     "@fontsource/inter": "^5.2.0",

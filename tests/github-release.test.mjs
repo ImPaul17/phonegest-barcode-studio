@@ -8,27 +8,31 @@ import { gzipSync } from 'node:zlib';
 import * as yaml from 'js-yaml';
 import { releaseAssetNames, validateReleaseArtifacts, validateReleaseTag, validateUpdateMetadata } from '../scripts/release-validation.mjs';
 
-const version = '1.2.3';
+const version = '1.2.3c';
 const names = releaseAssetNames(version);
 const installer = Buffer.from('MZ PhoneGest installer fixture');
 const checksum = createHash('sha512').update(installer).digest('base64');
 const metadata = {
   version,
+  releaseName: version,
   files: [{ url: names[0], sha512: checksum, size: installer.length }],
   path: names[0], sha512: checksum, releaseDate: '2026-11-06T12:00:00.000Z',
 };
 const expected = { version, installerName: names[0], installerSize: installer.length, installerSha512: checksum };
 
-test('release tags match package versions exactly and only stable releases are accepted', () => {
-  validateReleaseTag('v1.2.3', version);
-  for (const tag of ['1.2.3', 'v1.2.4', 'refs/tags/v1.2.3']) assert.throws(() => validateReleaseTag(tag, version));
-  for (const input of ['1.2.3-beta.1', '../1.2.3', '01.2.3']) assert.throws(() => releaseAssetNames(input));
+test('release tags preserve the exact canonical version, including letter revisions', () => {
+  for (const input of ['1.2.3', '1.2.3a', '1.2.3c', '1.2.3z']) {
+    validateReleaseTag(`v${input}`, input);
+    assert.equal(releaseAssetNames(input)[0], `PhoneGest-Barcode-Studio-${input}-Instalador.exe`);
+  }
+  for (const tag of ['1.2.3c', 'v1.2.3', 'v1.2.3b', 'v1.2.3d', 'v1.2.4', 'refs/tags/v1.2.3c']) assert.throws(() => validateReleaseTag(tag, version));
+  for (const input of ['1.2.3-beta.1', '1.2.3+C', '1.2.3C', '1.2.3cc', '../1.2.3', '01.2.3', '1.2.3c/installer.exe', '1.2.3c\n']) assert.throws(() => releaseAssetNames(input));
 });
 
 test('updater metadata rejects wrong hashes, sizes, versions and remote or unexpected assets', () => {
   validateUpdateMetadata(metadata, expected);
   for (const change of [
-    { version: '1.2.4' }, { path: names[3] }, { sha512: 'incorrect' },
+    { version: '1.2.4' }, { version: '1.2.3d' }, { version: '1.2.3' }, { releaseName: '1.2.3' }, { releaseName: undefined }, { path: names[3] }, { sha512: 'incorrect' },
     { files: [{ ...metadata.files[0], url: `https://example.com/${names[0]}` }] },
     { files: [{ ...metadata.files[0], size: installer.length + 1 }] },
     { files: [{ ...metadata.files[0], sha512: 'incorrect' }] },
@@ -36,16 +40,18 @@ test('updater metadata rejects wrong hashes, sizes, versions and remote or unexp
   ]) assert.throws(() => validateUpdateMetadata({ ...metadata, ...change }, expected));
 });
 
-test('display release labels do not replace the stable update version or asset paths', async () => {
-  const visible = { ...metadata, releaseName: '1.2.2b' };
-  validateUpdateMetadata(visible, { ...expected, displayVersion: '1.2.2b' });
-  assert.throws(() => validateUpdateMetadata(visible, { ...expected, displayVersion: '1.2.2c' }));
-  assert.throws(() => validateUpdateMetadata({ ...visible, version: '1.2.2b' }, { ...expected, displayVersion: '1.2.2b' }));
+test('package, release label and update manifest use one canonical version', async () => {
+  validateUpdateMetadata(metadata, { ...expected, displayVersion: version });
+  assert.throws(() => validateUpdateMetadata(metadata, { ...expected, displayVersion: '1.2.2b' }));
   const root = new URL('../', import.meta.url);
   const packageInfo = JSON.parse(await readFile(new URL('package.json', root), 'utf8'));
+  const lockInfo = JSON.parse(await readFile(new URL('package-lock.json', root), 'utf8'));
   const buildInfo = yaml.load(await readFile(new URL('electron-builder.yml', root), 'utf8'), { schema: yaml.JSON_SCHEMA });
-  assert.match(packageInfo.displayVersion, /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)[a-z]?$/);
-  assert.equal(buildInfo.releaseInfo.releaseName, packageInfo.displayVersion, 'La etiqueta visible del paquete y del actualizador deben coincidir.');
+  assert.match(packageInfo.version, /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)[a-z]?$/);
+  assert.equal(lockInfo.version, packageInfo.version, 'El lockfile debe conservar la versión exacta, incluida su letra.');
+  assert.equal(lockInfo.packages[''].version, packageInfo.version, 'El paquete raíz del lockfile debe usar la misma versión.');
+  if (packageInfo.displayVersion !== undefined) assert.equal(packageInfo.displayVersion, packageInfo.version, 'La versión visible e interna deben coincidir.');
+  assert.equal(buildInfo.releaseInfo.releaseName, packageInfo.version, 'El paquete y el actualizador deben usar la misma versión.');
   validateReleaseTag(`v${packageInfo.version}`, packageInfo.version);
 });
 

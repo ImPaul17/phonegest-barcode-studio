@@ -1,11 +1,11 @@
-import { createRequire } from 'node:module';
 import { UPDATE_FEED, UPDATE_RELEASE_URL, secureUpdateSession } from './updater-policy.mjs';
-import { getDisplayVersion } from '../shared/version.mjs';
+import { getDisplayVersion, isAppVersion } from '../shared/version.mjs';
+import { createDesktopLetterUpdater } from './letter-updater.mjs';
 
 export const INITIAL_CHECK_DELAY_MS = 8000;
 export const CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000;
 
-const cleanVersion = (value) => typeof value === 'string' && /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(value) && value.length < 100 ? value : undefined;
+const cleanVersion = (value) => isAppVersion(value) ? value : undefined;
 
 /** The controller receives update actions only: no document/session content enters it. */
 export function createUpdateController({
@@ -179,8 +179,7 @@ export function createDesktopUpdateController({ app, isSmoke = false, platform =
   else if (environment.PORTABLE_EXECUTABLE_FILE || environment.PORTABLE_EXECUTABLE_DIR) unsupportedReason = 'La versión portable se actualiza descargando una nueva versión. Instala la aplicación para actualizarla desde aquí.';
   else {
     try {
-      const require = createRequire(import.meta.url);
-      updater = require('electron-updater').autoUpdater;
+      updater = createDesktopLetterUpdater(app);
       secureUpdateSession(updater.netSession);
     } catch {
       updater = undefined;

@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Etiqueta estable ya existente (ej. v1.0.2)
+        description: Etiqueta ya existente (ej. v1.0.4c)
         required: true
         type: string
 
@@ -49,11 +49,11 @@ jobs:
           $packageInfo = Get-Content package.json -Raw | ConvertFrom-Json
           $packageVersion = $packageInfo.version
           $displayVersion = if ($packageInfo.displayVersion) { $packageInfo.displayVersion } else { $packageVersion }
-          if ($packageVersion -notmatch '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$' -or $env:RELEASE_TAG -cne "v$packageVersion") {
-            throw 'La etiqueta debe ser v + la versión estable exacta de package.json.'
+          if ($packageVersion -cnotmatch '\A(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)[a-z]?\z' -or $env:RELEASE_TAG -cne "v$packageVersion") {
+            throw 'La etiqueta debe ser v + la versión exacta de package.json, incluida su letra.'
           }
-          if ($displayVersion -cnotmatch '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)[a-z]?$') {
-            throw 'La versión visible debe ser x.y.z o x.y.z seguida de una letra minúscula.'
+          if ($displayVersion -cne $packageVersion) {
+            throw 'La versión visible e interna deben ser idénticas.'
           }
           git show-ref --verify --quiet "refs/tags/$env:RELEASE_TAG"
           if ($LASTEXITCODE -ne 0) { throw 'La etiqueta debe existir; este flujo no crea etiquetas.' }
@@ -77,12 +77,24 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node tests/png-integration.mjs build/ci-smoke
       - name: Crear una sola compilación del instalador y portable
-        run: npx electron-builder --win nsis portable --x64 --publish never
+        run: npx electron-builder --config electron-builder.config.cjs --win nsis portable --x64 --publish never
       - name: Verificar paquete y metadatos del actualizador
         run: |
           node scripts/verify-package.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node scripts/release-validation.mjs release
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $executables = @(
+            'release/win-unpacked/PhoneGest Barcode Studio.exe',
+            "release/PhoneGest-Barcode-Studio-$env:RELEASE_VERSION-Instalador.exe",
+            "release/PhoneGest-Barcode-Studio-$env:RELEASE_VERSION-Portable.exe"
+          )
+          foreach ($file in $executables) {
+            $versionInfo = (Get-Item -LiteralPath $file).VersionInfo
+            if ($versionInfo.FileVersion -cne $env:RELEASE_VERSION -or $versionInfo.ProductVersion -cne $env:RELEASE_VERSION) {
+              throw "La versión de Windows de $file no coincide con $env:RELEASE_VERSION."
+            }
+          }
       - name: Probar el ejecutable empaquetado
         run: |
           Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
@@ -90,6 +102,8 @@ jobs:
           $executable = Join-Path $env:GITHUB_WORKSPACE 'release/win-unpacked/PhoneGest Barcode Studio.exe'
           $process = Start-Process -FilePath $executable -ArgumentList @('--smoke-test', "`"$smokeDirectory`"") -WindowStyle Hidden -Wait -PassThru
           if ($process.ExitCode -ne 0) { throw "La aplicación empaquetada falló: $($process.ExitCode)" }
+          $smokeResult = Get-Content (Join-Path $smokeDirectory 'smoke-result.json') -Raw | ConvertFrom-Json
+          if ($smokeResult.version -cne $env:RELEASE_VERSION) { throw 'La aplicación empaquetada devuelve otra versión.' }
           node tests/pdf-integration.mjs $smokeDirectory
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node tests/png-integration.mjs $smokeDirectory
@@ -128,11 +142,3 @@ jobs:
             release/release-validation.json
           retention-days: 14
           if-no-files-found: ignore
-
-  public-tags:
-    needs: release
-    permissions:
-      contents: write
-    uses: ./.github/workflows/release-tags.yml
-    with:
-      tag: ${{ inputs.tag || github.ref_name }}

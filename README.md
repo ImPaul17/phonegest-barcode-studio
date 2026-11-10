@@ -10,20 +10,22 @@ Descarga los ejecutables desde [GitHub Releases](https://github.com/ImPaul17/pho
 
 | Archivo | Uso |
 | --- | --- |
-| `PhoneGest-Barcode-Studio-1.0.5-Instalador.exe` | Instala la versión **1.0.4b**, crea accesos y permite actualizar desde la aplicación. |
-| `PhoneGest-Barcode-Studio-1.0.5-Portable.exe` | Abre **1.0.4b** sin instalar. Para actualizar, descarga y ejecuta un portable nuevo. |
+| `PhoneGest-Barcode-Studio-1.0.4c-Instalador.exe` | Instala la versión **1.0.4c**, crea accesos y permite actualizar desde la aplicación. |
+| `PhoneGest-Barcode-Studio-1.0.4c-Portable.exe` | Abre **1.0.4c** sin instalar. Para actualizar, descarga y ejecuta un portable nuevo. |
 
 El número de versión del nombre cambia en cada publicación. Ambas variantes trabajan offline y guardan la sesión en el perfil del usuario de Windows. La edición portable también utiliza ese perfil; los datos de trabajo no viajan dentro del ejecutable.
 
-La versión visible actual y su tag pública son **1.0.4b** / **`v1.0.4b`**. Las mejoras pequeñas siguen con **1.0.4c**, **1.0.4d**, etc., sin cambiar la base **1.0.4**. El instalador y el actualizador mantienen un número interno creciente, **1.0.5** en esta publicación, y la referencia técnica **`v1.0.5`** para que los clientes ya instalados puedan actualizar. Al actualizar desde 1.0.4 puede aparecer primero ese número; tras instalar, la aplicación muestra **1.0.4b**.
+La versión actual es **1.0.4c**, tanto en el código y la aplicación como en el instalador y el actualizador. Su única tag de publicación es **`v1.0.4c`**. Las mejoras pequeñas siguen con **1.0.4d**, **1.0.4e**, etc., sin cambiar la base **1.0.4** ni utilizar otra versión interna.
 
 Los ejecutables actuales no tienen certificado de firma digital. Windows puede identificar al editor como desconocido. Utiliza los archivos del repositorio de PhoneGest enlazado arriba.
 
 ## Actualizaciones
 
-Desde la versión **1.0.2**, la aplicación instalada consulta las versiones estables de este repositorio poco después de iniciarse y cada cuatro horas mientras permanece abierta. Descarga las versiones nuevas en segundo plano y espera a que elijas **Reiniciar e instalar**. Antes de reiniciar guarda la sesión actual; cerrar normalmente la aplicación no instala una descarga pendiente.
+**Para pasar desde una versión anterior a 1.0.4c, descarga y ejecuta una vez el instalador 1.0.4c desde GitHub Releases.** Los actualizadores anteriores solo admiten versiones numéricas y no pueden hacer automáticamente esta transición al formato con letras. La edición portable se cambia descargando el portable nuevo.
 
-Abre el menú **Actualizaciones** desde su botón en la cabecera para ver la versión instalada, el estado y el progreso, o pulsa **Buscar actualizaciones**. Cuando hay una versión nueva aparece un aviso debajo de la cabecera; al ocultarlo, el indicador del botón permanece visible y el aviso vuelve a aparecer cuando está lista para instalar. Si no hay conexión, puedes seguir trabajando con tus códigos. La edición portable ofrece **Abrir descargas** para conseguir una versión nueva. Las versiones 1.0.0 y 1.0.1 necesitan una primera actualización manual al instalador 1.0.2 o posterior para incorporar el sistema corregido.
+Desde **1.0.4c**, la aplicación instalada compara directamente versiones como **1.0.4c**, **1.0.4d** y **1.0.4e**. Consulta las versiones estables de este repositorio poco después de iniciarse y cada cuatro horas mientras permanece abierta. Descarga las versiones nuevas en segundo plano y espera a que elijas **Reiniciar e instalar**. Antes de reiniciar guarda la sesión actual; cerrar normalmente la aplicación no instala una descarga pendiente.
+
+Abre el menú **Actualizaciones** desde su botón en la cabecera para ver la versión instalada, el estado y el progreso, o pulsa **Buscar actualizaciones**. Cuando hay una versión nueva aparece un aviso debajo de la cabecera; al ocultarlo, el indicador del botón permanece visible y el aviso vuelve a aparecer cuando está lista para instalar. Si no hay conexión, puedes seguir trabajando con tus códigos. La edición portable ofrece **Abrir descargas** para conseguir una versión nueva.
 
 El origen es el repositorio público `ImPaul17/phonegest-barcode-studio` y la infraestructura de archivos de GitHub. No se necesita cuenta ni token de GitHub en el equipo del usuario. GitHub recibe las solicitudes habituales de conexión y descarga, incluidos la dirección IP y los datos técnicos de HTTP; no recibe códigos, proyectos, PDF ni imágenes de trabajo.
 
@@ -129,13 +131,13 @@ npm run release:validate
 
 Los usuarios finales reciben el instalador o el portable. No necesitan el repositorio ni `node_modules`. La carpeta `win-unpacked` debe conservarse completa si se utiliza para probar o distribuir esa variante. Mantén los avisos de terceros y las licencias que acompañan al paquete.
 
-La configuración de empaquetado está en `electron-builder.yml`. `shared/` contiene el motor; `electron/`, archivos, impresión y actualizaciones; `src/`, la interfaz. Los datos de trabajo, PDF originales, proyectos y resultados de pruebas no forman parte del repositorio ni del paquete.
+La configuración base de empaquetado está en `electron-builder.yml`; `electron-builder.config.cjs` conserva la versión con letra y adapta los campos numéricos que exige Windows. `shared/` contiene el motor; `electron/`, archivos, impresión y actualizaciones; `src/`, la interfaz. Los datos de trabajo, PDF originales, proyectos y resultados de pruebas no forman parte del repositorio ni del paquete.
 
 ## Publicar una versión
 
-Los cambios de `main` pasan comprobaciones en Windows. Una etiqueta técnica estable **`vX.Y.Z`**, que coincida con `package.json.version`, ejecuta el flujo de publicación y sube juntos el instalador, su `.blockmap`, `latest.yml` y el portable a GitHub Releases. Al terminar se crea automáticamente la tag pública de `displayVersion`, por ejemplo **`v1.0.4c`**, en el mismo commit. No se publican documentos de trabajo.
+Los cambios de `main` pasan comprobaciones en Windows. Una etiqueta como **`v1.0.4c`**, que coincida exactamente con `package.json.version`, ejecuta el flujo de publicación y sube juntos el instalador, su `.blockmap`, `latest.yml` y el portable a GitHub Releases. La misma versión, incluida su letra, identifica el código, la aplicación y sus archivos. No se crean aliases numéricos ni se publican documentos de trabajo.
 
-Consulta [docs/RELEASING.md](docs/RELEASING.md) para preparar una versión y recuperar una publicación interrumpida. No reemplaces archivos de una versión publicada: incrementa la versión para mantener coherentes los clientes que ya la descargaron.
+Consulta [docs/RELEASING.md](docs/RELEASING.md) para preparar una versión y recuperar una publicación interrumpida. No reemplaces archivos de una versión publicada: avanza la letra de revisión o la versión base para mantener coherentes los clientes que ya la descargaron.
 
 ## Créditos y licencias
 

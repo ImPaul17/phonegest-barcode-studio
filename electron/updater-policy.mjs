@@ -15,11 +15,11 @@ export function isAllowedUpdateUrl(value) {
       if (pathname === `${RELEASE_PATH}.atom` || pathname === `${RELEASE_PATH}/latest`) return true;
       // GitHub resolves /releases/latest to its stable tag even with JSON Accept.
       if (pathname.startsWith(`${RELEASE_PATH}/tag/`)) {
-        return /^v?(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/.test(url.pathname.slice(`${RELEASE_PATH}/tag/`.length));
+        return /^v?(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)[a-z]?$/.test(url.pathname.slice(`${RELEASE_PATH}/tag/`.length));
       }
       if (!pathname.startsWith(`${RELEASE_PATH}/download/`)) return false;
       const [tag, filename, extra] = url.pathname.slice(`${RELEASE_PATH}/download/`.length).split('/');
-      return !extra && /^v?\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(tag)
+      return !extra && /^v?(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)[a-z]?$/.test(tag)
         && /^(?:latest\.yml|PhoneGest-Barcode-Studio-\d[0-9A-Za-z.+-]*-Instalador\.exe(?:\.blockmap)?)$/i.test(filename);
     }
     if (url.hostname === 'api.github.com') return pathname === `${API_PATH}/latest`;

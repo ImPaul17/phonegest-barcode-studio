@@ -6,9 +6,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gunzipSync } from 'node:zlib';
 import * as yaml from 'js-yaml';
+import { isAppVersion } from '../shared/version.mjs';
 
 export function releaseAssetNames(version) {
-  assert.match(version, /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/, 'Solo se publican versiones estables x.y.z.');
+  assert.ok(isAppVersion(version), 'La versión debe ser x.y.z, opcionalmente seguida de una letra minúscula.');
   const installer = `PhoneGest-Barcode-Studio-${version}-Instalador.exe`;
   return [installer, `${installer}.blockmap`, 'latest.yml', `PhoneGest-Barcode-Studio-${version}-Portable.exe`];
 }
@@ -19,9 +20,11 @@ export function validateReleaseTag(tag, version) {
 }
 
 export function validateUpdateMetadata(metadata, { version, displayVersion, installerName, installerSize, installerSha512 }) {
+  releaseAssetNames(version);
   assert.ok(metadata && typeof metadata === 'object', 'latest.yml debe contener un objeto.');
   assert.equal(metadata.version, version, 'latest.yml contiene otra versión.');
-  if (displayVersion !== undefined) assert.equal(metadata.releaseName, displayVersion, 'latest.yml contiene otra versión visible.');
+  if (displayVersion !== undefined) assert.equal(displayVersion, version, 'La versión visible e interna deben coincidir.');
+  assert.equal(metadata.releaseName, version, 'latest.yml debe anunciar la misma versión que package.json.');
   assert.equal(metadata.path, installerName, 'La actualización debe apuntar al instalador NSIS de esta versión.');
   assert.equal(metadata.sha512, installerSha512, 'SHA512 principal incorrecto.');
   assert.ok(Array.isArray(metadata.files) && metadata.files.length === 1, 'latest.yml debe anunciar un único instalador x64.');

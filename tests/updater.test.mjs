@@ -16,23 +16,35 @@ class MockUpdater extends EventEmitter {
   quitAndInstall(...args) { this.installs.push(args); }
 }
 
-test('display labels remain separate from numeric update versions through download and reset', () => {
+test('canonical letter versions survive availability, download and reset without a numeric alias', () => {
   const updater = new MockUpdater();
-  const controller = createUpdateController({ currentVersion: '1.0.5', currentDisplayVersion: '1.0.4b', updater });
-  assert.equal(controller.getState().currentVersion, '1.0.5');
-  assert.equal(controller.getState().currentDisplayVersion, '1.0.4b');
-  updater.emit('update-available', { version: '1.0.6', releaseName: 'PhoneGest Barcode Studio 1.0.4c' });
-  assert.equal(controller.getState().availableVersion, '1.0.6');
-  assert.equal(controller.getState().availableDisplayVersion, '1.0.4c');
+  const controller = createUpdateController({ currentVersion: '1.0.4c', updater });
+  assert.equal(controller.getState().currentVersion, '1.0.4c');
+  assert.equal(controller.getState().currentDisplayVersion, '1.0.4c');
+  updater.emit('update-available', { version: '1.0.4d', releaseName: '1.0.4d' });
+  assert.equal(controller.getState().availableVersion, '1.0.4d');
+  assert.equal(controller.getState().availableDisplayVersion, '1.0.4d');
   updater.emit('download-progress', { percent: 70 });
-  updater.emit('update-downloaded', { version: '1.0.6' });
-  assert.equal(controller.getState().availableVersion, '1.0.6');
-  assert.equal(controller.getState().availableDisplayVersion, '1.0.4c');
-  updater.emit('update-not-available', { version: '1.0.5' });
+  updater.emit('update-downloaded', { version: '1.0.4d' });
+  assert.equal(controller.getState().availableVersion, '1.0.4d');
+  assert.equal(controller.getState().availableDisplayVersion, '1.0.4d');
+  updater.emit('update-not-available', { version: '1.0.4c' });
   assert.equal(controller.getState().availableVersion, undefined);
   assert.equal(controller.getState().availableDisplayVersion, undefined);
-  assert.equal(controller.getState().currentDisplayVersion, '1.0.4b');
+  assert.equal(controller.getState().currentVersion, '1.0.4c');
+  assert.equal(controller.getState().currentDisplayVersion, '1.0.4c');
   controller.dispose();
+});
+
+test('invalid remote version labels cannot announce an installable release', () => {
+  for (const version of ['1.0.4cc', '1.0.4C', '1.0.4-c', '1.0.4c\n', 'v1.0.4c', '../1.0.4c']) {
+    const updater = new MockUpdater();
+    const controller = createUpdateController({ currentVersion: '1.0.4c', updater });
+    updater.emit('update-available', { version });
+    assert.equal(controller.getState().status, 'error', version);
+    assert.equal(controller.getState().availableVersion, undefined, version);
+    controller.dispose();
+  }
 });
 
 test('older numeric clients can receive a labelled release and malformed names safely fall back', () => {
@@ -52,11 +64,11 @@ test('older numeric clients can receive a labelled release and malformed names s
   controller.dispose();
 });
 
-test('unsupported desktop editions retain their configured display label without network access', () => {
-  const controller = createDesktopUpdateController({ app: { isPackaged: false, getVersion: () => '1.0.5' }, currentDisplayVersion: '1.0.4b' });
+test('unsupported desktop editions retain their canonical letter version without network access', () => {
+  const controller = createDesktopUpdateController({ app: { isPackaged: false, getVersion: () => '1.0.4c' } });
   assert.equal(controller.getState().status, 'unsupported');
-  assert.equal(controller.getState().currentVersion, '1.0.5');
-  assert.equal(controller.getState().currentDisplayVersion, '1.0.4b');
+  assert.equal(controller.getState().currentVersion, '1.0.4c');
+  assert.equal(controller.getState().currentDisplayVersion, '1.0.4c');
   controller.dispose();
 });
 
@@ -66,8 +78,13 @@ test('update policy permits only this public repository and its release CDN redi
     'https://github.com/ImPaul17/phonegest-barcode-studio/releases.atom',
     'https://github.com/ImPaul17/phonegest-barcode-studio/releases/tag/v1.0.1',
     'https://github.com/ImPaul17/phonegest-barcode-studio/releases/tag/1.0.2',
+    'https://github.com/ImPaul17/phonegest-barcode-studio/releases/tag/v1.0.4c',
+    'https://github.com/ImPaul17/phonegest-barcode-studio/releases/tag/1.0.4d',
     'https://github.com/ImPaul17/phonegest-barcode-studio/releases/download/v1.0.2/latest.yml',
     'https://github.com/ImPaul17/phonegest-barcode-studio/releases/download/v1.0.2/PhoneGest-Barcode-Studio-1.0.2-Instalador.exe',
+    'https://github.com/ImPaul17/phonegest-barcode-studio/releases/download/v1.0.4c/latest.yml',
+    'https://github.com/ImPaul17/phonegest-barcode-studio/releases/download/v1.0.4c/PhoneGest-Barcode-Studio-1.0.4c-Instalador.exe',
+    'https://github.com/ImPaul17/phonegest-barcode-studio/releases/download/v1.0.4c/PhoneGest-Barcode-Studio-1.0.4c-Instalador.exe.blockmap',
     'https://api.github.com/repos/ImPaul17/phonegest-barcode-studio/releases/latest',
     'https://release-assets.githubusercontent.com/github-production-release-asset/123/asset?sig=temporary',
     'https://objects.githubusercontent.com/github-production-release-asset-2e65be/123/asset',
@@ -79,9 +96,14 @@ test('update policy permits only this public repository and its release CDN redi
     'https://github.com/ImPaul17/phonegest-barcode-studio/releases/tag/feature',
     'https://github.com/ImPaul17/phonegest-barcode-studio/releases/tag/v1.0.2-beta.1',
     'https://github.com/ImPaul17/phonegest-barcode-studio/releases/tag/v01.0.1',
+    'https://github.com/ImPaul17/phonegest-barcode-studio/releases/tag/v1.0.4cc',
+    'https://github.com/ImPaul17/phonegest-barcode-studio/releases/tag/v1.0.4C',
     'https://github.com/ImPaul17/phonegest-barcode-studio/releases/tag/v1.0.1/other',
     'https://github.com/ImPaul17/phonegest-barcode-studio/issues',
     'https://github.com/ImPaul17/phonegest-barcode-studio/releases/download/v1.0.2/other.exe',
+    'https://github.com/ImPaul17/phonegest-barcode-studio/releases/download/v1.0.4cc/latest.yml',
+    'https://github.com/ImPaul17/phonegest-barcode-studio/releases/download/v1.0.4c%2Fextra/latest.yml',
+    'https://github.com/ImPaul17/phonegest-barcode-studio/releases/download/v1.0.4c/PhoneGest-Barcode-Studio-1.0.4c-Portable.exe',
     'https://github.com:8443/ImPaul17/phonegest-barcode-studio/releases/latest',
     'https://github.com@evil.example/ImPaul17/phonegest-barcode-studio/releases/latest',
     'https://user:token@github.com/ImPaul17/phonegest-barcode-studio/releases/latest',

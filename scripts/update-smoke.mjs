@@ -19,8 +19,9 @@ if (!process.versions.electron || process.env.ELECTRON_RUN_AS_NODE) {
   child.on('exit', (code) => { process.exitCode = code ?? 1; });
 } else {
   const { app, session } = require('electron');
-  const { NsisUpdater } = require('electron-updater');
   const { ElectronHttpExecutor } = require('electron-updater/out/electronHttpExecutor.js');
+  const { createLetterNsisUpdater } = await import('../electron/letter-updater.mjs');
+  const { isAppVersion } = await import('../shared/version.mjs');
   const { createUpdateController } = await import('../electron/updater.mjs');
   const { secureUpdateSession, isAllowedUpdateUrl, UPDATE_RELEASE_URL } = await import('../electron/updater-policy.mjs');
   const args = process.argv.slice(2);
@@ -43,7 +44,7 @@ if (!process.versions.electron || process.env.ELECTRON_RUN_AS_NODE) {
   void app.whenReady().then(async () => {
   clearTimeout(startupTimeout);
   try {
-    assert.match(version, /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/);
+    assert.ok(isAppVersion(version), 'La versión de prueba debe seguir el formato x.y.z con una letra opcional.');
     await mkdir(output, { recursive: true });
     await mkdir(app.getPath('userData'), { recursive: true });
     const configFile = path.join(output, 'smoke-app-update.yml');
@@ -61,7 +62,7 @@ if (!process.versions.electron || process.env.ELECTRON_RUN_AS_NODE) {
       quit: () => { throw new Error('El smoke nunca reinicia ni instala.'); },
       onQuit: () => {},
     };
-    const updater = new NsisUpdater(null, adapter);
+    const updater = createLetterNsisUpdater(adapter);
     updater.httpExecutor = new ElectronHttpExecutor((authInfo, callback) => updater.emit('login', authInfo, callback));
     updater.quitAndInstall = () => { throw new Error('El smoke nunca ejecuta el instalador.'); };
     const updateSession = updater.netSession;
