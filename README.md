@@ -1,4 +1,4 @@
-<h1 align="center"><img src="assets/phonegest-icon.png" alt="" width="44" height="44" align="middle">&nbsp;PhoneGest Barcode&nbsp;Studio</h1>
+<h1 align="center"><img src="assets/phonegest-icon.png" alt="" width="44" height="44" align="texttop">&nbsp;PhoneGest Barcode&nbsp;Studio</h1>
 
 <p align="center">
   <strong>Etiquetas Code 128 para web y Windows.</strong><br>
