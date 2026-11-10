@@ -50,7 +50,15 @@ Después llama a [Sincronizar tags públicas](../.github/workflows/release-tags.
 
 Para recuperar una sincronización interrumpida, ejecuta **Sincronizar tags públicas** desde Actions, selecciona como referencia la tag numérica de la publicación e indica también esa tag en el campo de entrada. Este flujo no vuelve a compilar ni cambia los archivos publicados. Puede repetirse: si la tag pública ya existe en el commit correcto, termina sin cambios.
 
-Las publicaciones anteriores a la incorporación de este flujo necesitan crear su tag pública una vez con Git, porque su commit no incluye el workflow nuevo. La correspondencia inicial es **`v1.0.4b` → commit de `v1.0.5`**; se conserva `v1.0.5` para el actualizador.
+Si los workflows del commit publicado difieren de los de `main`, GitHub puede denegar la creación de la referencia con `GITHUB_TOKEN`; elegir otra referencia al ejecutar el flujo no evita esta restricción. En ese caso crea la tag con tu acceso Git habitual, sin forzar ni sustituir referencias existentes. Las publicaciones anteriores a la incorporación de este flujo necesitan esa sincronización inicial. La correspondencia inicial es **`v1.0.4b` → commit de `v1.0.5`**; se conserva `v1.0.5` para el actualizador.
+
+```powershell
+git fetch origin --tags
+git tag -a v1.0.4b 'v1.0.5^{commit}' -m "PhoneGest Barcode Studio 1.0.4b (actualizador: v1.0.5)"
+git push origin v1.0.4b
+```
+
+Este ejemplo ya está aplicado. Para otra revisión, utiliza su versión pública y la tag numérica correspondiente. Si Git indica que la tag ya existe, verifica el commit; no utilices `--force`.
 
 | Archivo | Uso |
 | --- | --- |
