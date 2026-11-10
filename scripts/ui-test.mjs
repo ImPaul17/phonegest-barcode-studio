@@ -1,6 +1,7 @@
 import { _electron as electron } from 'playwright';
 import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, readFile, readdir, writeFile } from 'node:fs/promises';
+import { setTimeout as delay } from 'node:timers/promises';
 import path from 'node:path';
 import os from 'node:os';
 import { createRequire } from 'node:module';
@@ -15,6 +16,16 @@ const env = {...process.env,PHONEGEST_TEST_DATA:userData};
 delete env.ELECTRON_RUN_AS_NODE;
 let application;
 const errors=[];
+
+async function chooseAppearance(page, name, theme) {
+  await page.getByRole('button',{name:'Configuración',exact:true}).click();
+  const settings = page.getByRole('dialog',{name:'Hazlo a tu medida'});
+  await settings.getByRole('button',{name,exact:true}).click();
+  await settings.getByRole('button',{name,exact:true,pressed:true}).waitFor();
+  await page.locator(`html[data-theme="${theme}"]`).waitFor({state:'attached'});
+  await settings.getByRole('button',{name:'Listo',exact:true}).click();
+  await settings.waitFor({state:'hidden'});
+}
 
 async function checkLayoutSelectors(page) {
   const toolbar = page.getByRole('combobox',{name:'Formato del documento',exact:true});
@@ -65,8 +76,9 @@ async function checkLayoutSelectors(page) {
     report.push({theme,location,...metrics});
     return metrics;
   };
-  for(const theme of ['light','dark']) {
-    if(await page.locator('html').getAttribute('data-theme')!==theme)await page.getByRole('button',{name:theme==='dark'?'Cambiar a modo oscuro':'Cambiar a modo claro',exact:true}).click();
+  for(const theme of ['light','dark','liquid-glass']) {
+    if(theme==='liquid-glass') await chooseAppearance(page,'Liquid Glass',theme);
+    else if(await page.locator('html').getAttribute('data-theme')!==theme) await page.getByRole('button',{name:theme==='dark'?'Cambiar a modo oscuro':'Cambiar a modo claro',exact:true}).click();
     await toolbar.click();
     await assertPopup(theme,'toolbar');
     await page.getByRole('option',{name:compact,exact:true}).hover();
@@ -128,9 +140,9 @@ async function checkLayoutSelectors(page) {
   await toolbar.click();
   await page.getByRole('heading',{name:'Vista previa',exact:true}).click();
   await listbox.waitFor({state:'hidden'});
-  if(await page.locator('html').getAttribute('data-theme')!=='light')await page.getByRole('button',{name:'Cambiar a modo claro',exact:true}).click();
+  await chooseAppearance(page,'Claro','light');
   assert.match(await toolbar.textContent(),/PhoneGest/);
-  await writeFile(path.join(output,'phonegest-selectors-report.json'),JSON.stringify({success:true,checks:['light/dark normal and hover contrast','viewport and modal popup visibility','click selection and pagination','toolbar/settings synchronization','ArrowUp/ArrowDown/Home/End/Enter','typeahead','Space and Tab','outside click','Escape closes menu before modal'],popups:report},null,2));
+  await writeFile(path.join(output,'phonegest-selectors-report.json'),JSON.stringify({success:true,checks:['light, dark and Liquid Glass normal and hover contrast','viewport and modal popup visibility','click selection and pagination','toolbar/settings synchronization','ArrowUp/ArrowDown/Home/End/Enter','typeahead','Space and Tab','outside click','Escape closes menu before modal'],popups:report},null,2));
 }
 
 try {
@@ -203,18 +215,31 @@ try {
   await page.getByRole('combobox',{name:'Formato del documento'}).click();
   await page.getByRole('option',{name:'Compacto · 7 por página',exact:true}).click();
   await page.getByText('Página 1 de 1',{exact:true}).waitFor();
+  const preview = page.locator('iframe[title*="documento A4"]');
+  const a4BeforeTheme = await preview.getAttribute('srcdoc');
+  await chooseAppearance(page,'Liquid Glass','liquid-glass');
+  assert.equal(await preview.getAttribute('srcdoc'),a4BeforeTheme,'Liquid Glass must not change the vector A4 document');
+  assert.equal(await frame.locator('section.page').evaluate(paper=>getComputedStyle(paper).backgroundColor),'rgb(255, 255, 255)');
+  await page.screenshot({path:path.join(output,'PhoneGest-Barcode-Studio-liquid-glass.png'),fullPage:true});
   await input.fill('BORRADOR-LOCAL');
-  await page.waitForTimeout(800);
-  const persisted = JSON.parse(await readFile(path.join(userData,'session.json'),'utf8'));
+  const sessionFile = path.join(userData,'session.json');
+  let persisted = JSON.parse(await readFile(sessionFile,'utf8'));
+  const saveDeadline = Date.now() + 5000;
+  while ((persisted.input!=='BORRADOR-LOCAL' || persisted.theme!=='liquid-glass') && Date.now()<saveDeadline) {
+    await delay(50);
+    persisted = JSON.parse(await readFile(sessionFile,'utf8'));
+  }
   assert.equal(persisted.codes.length,5);
   assert.equal(persisted.input,'BORRADOR-LOCAL');
   assert.equal(persisted.settings.layout,'compact');
   assert.equal(persisted.settings.showNumbers,false);
+  assert.equal(persisted.theme,'liquid-glass');
   const blocked = await page.evaluate(async()=>{try{await fetch('https://example.com/phonegest-privacy-check');return false;}catch{return true;}});
   assert.equal(blocked,true);
   await page.reload();
   await page.getByText('5 códigos listos para exportar',{exact:true}).waitFor();
   assert.equal(await input.inputValue(),'BORRADOR-LOCAL');
+  await page.locator('html[data-theme="liquid-glass"]').waitFor({state:'attached'});
   await page.getByRole('button',{name:'Abrir proyecto',exact:true}).click();
   await page.getByText('Proyecto abierto correctamente.',{exact:true}).waitFor();
   assert.equal(await page.locator('.code-row').count(),3);
@@ -224,5 +249,5 @@ try {
   await page.getByText('Todavía no hay códigos',{exact:true}).waitFor();
   assert.equal(await page.getByRole('button',{name:'Generar PDF'}).isDisabled(),true);
   assert.deepEqual(errors,[]);
-  console.log(JSON.stringify({success:true,checks:['paste and add','live vector preview','light and dark theme','PDF export via IPC','project save and open via IPC','branded PNG export via IPC','invalid input retained','multi-page navigation','themed selector contrast and popup visibility','selector click, keyboard, focus and modal dismissal','toolbar/settings layout synchronization','checkbox and number toggles','edit','reorder','delete and undo','format switch','session restoration','local draft','network denied','clear confirmation'],screenshots:output},null,2));
+  console.log(JSON.stringify({success:true,checks:['paste and add','live vector preview','light and dark theme','Liquid Glass preserves white A4 preview and restores after reload','PDF export via IPC','project save and open via IPC','branded PNG export via IPC','invalid input retained','multi-page navigation','themed selector contrast and popup visibility','selector click, keyboard, focus and modal dismissal','toolbar/settings layout synchronization','checkbox and number toggles','edit','reorder','delete and undo','format switch','session restoration','local draft','network denied','clear confirmation'],screenshots:output},null,2));
 } finally {await application?.close();}

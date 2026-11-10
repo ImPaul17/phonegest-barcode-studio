@@ -30,6 +30,8 @@ test('local session keeps draft and theme while removing unknown fields', () => 
   assert.equal(session.theme, 'dark');
   assert.equal(session.input, 'pending');
   assert.equal(Object.hasOwn(session, 'injected'), false);
+  assert.equal(validateSession({ ...session, theme: 'liquid-glass' }).theme, 'liquid-glass');
+  assert.equal(validateSession({ ...session, theme: 'unrecognized-theme' }).theme, 'light');
 });
 
 test('production blocks network and files outside the bundled app', () => {

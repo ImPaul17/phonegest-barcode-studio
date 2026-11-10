@@ -6,7 +6,7 @@ export interface Settings {
   showText: boolean;
   documentTitle: string;
 }
-export type Theme = 'light' | 'dark' | 'system';
+export type Theme = 'light' | 'dark' | 'system' | 'liquid-glass';
 export interface Project { codes: string[]; settings: Settings }
 export interface Session extends Project { theme: Theme; input?: string }
 export interface FileResult { canceled: boolean; path?: string; count?: number; project?: Project }

@@ -3,7 +3,7 @@ productName: PhoneGest Barcode Studio
 asar: true
 compression: normal
 releaseInfo:
-  releaseName: 1.0.4c
+  releaseName: 1.0.5
 publish:
   provider: github
   owner: ImPaul17

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, ArrowUpRight, Barcode, Check, CheckCheck, CheckCircle2, ChevronLeft, ChevronRight, ClipboardPaste, Download, FileDown, FilePlus2, FileText, FolderOpen, GripVertical, ImageDown, ListOrdered, LoaderCircle, Minus, Moon, Pencil, Plus, Printer, RefreshCw, RotateCcw, Save, ScanLine, Settings2, ShieldCheck, Sun, Trash2, X, ZoomIn } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpRight, Barcode, Check, CheckCheck, CheckCircle2, ChevronLeft, ChevronRight, ClipboardPaste, Download, FileDown, FilePlus2, FileText, FolderOpen, GripVertical, ImageDown, ListOrdered, LoaderCircle, Minus, Moon, Pencil, Plus, Printer, RefreshCw, RotateCcw, Save, ScanLine, Settings2, ShieldCheck, Sun, Droplets, Trash2, X, ZoomIn } from 'lucide-react';
 import { parseCodes, renderDocument, validateCode, normalizeSettings } from '../shared/index.mjs';
 import type { Project, Session, Settings, Theme, UpdateState } from './types';
 import Select from './components/Select';
+import LiquidGlassLens from './components/LiquidGlassLens';
 
 const INITIAL_SETTINGS: Settings = { layout: 'comfortable', startNumber: 1, showNumbers: true, showCheckboxes: true, showText: true, documentTitle: '' };
 const EXAMPLES = ['L3A5KA9806994060129590B', 'L3A5KA9806994140129590X', 'L3A5KA9807022320129590Q'];
@@ -11,6 +12,13 @@ const MAX_CODES = 1000;
 const WINDOWS_DOWNLOADS = 'https://github.com/ImPaul17/phonegest-barcode-studio/releases/latest';
 const layoutNames = { comfortable: 'PhoneGest · 4 por página', compact: 'Compacto · 7 por página', large: 'Amplio · 2 por página' };
 const layoutOptions = Object.entries(layoutNames).map(([value, label]) => ({ value: value as Settings['layout'], label }));
+const THEME_OPTIONS = [
+  { value: 'light', label: 'Claro', Icon: Sun },
+  { value: 'dark', label: 'Oscuro', Icon: Moon },
+  { value: 'system', label: 'Sistema', Icon: Settings2 },
+  { value: 'liquid-glass', label: 'Liquid Glass', Icon: Droplets },
+] as const;
+
 export default function App() {
   const api = window.phonegest;
   const [codes, setCodes] = useState<string[]>([]);
@@ -47,7 +55,8 @@ export default function App() {
   const dragIndex = useRef<number | null>(null);
   const updatesButtonRef = useRef<HTMLButtonElement>(null);
   const updatesDialogRef = useRef<HTMLElement>(null);
-  const dark = theme === 'dark' || (theme === 'system' && systemDark);
+  const appliedTheme = theme === 'system' ? (systemDark ? 'dark' : 'light') : theme;
+  const dark = appliedTheme === 'dark';
   const pageCount = Math.max(1, Math.ceil(codes.length / ROWS[settings.layout]));
   const duplicates = codes.length - new Set(codes).size;
   const project: Project = useMemo(() => ({codes, settings}), [codes, settings]);
@@ -94,7 +103,7 @@ export default function App() {
     return () => { active = false; unsubscribe?.(); };
   }, [api]);
 
-  useEffect(() => { document.documentElement.dataset.theme = dark ? 'dark' : 'light'; }, [dark]);
+  useEffect(() => { document.documentElement.dataset.theme = appliedTheme; }, [appliedTheme]);
   useEffect(() => {
     if (!ready || !api) return;
     let active = true;
@@ -273,6 +282,7 @@ export default function App() {
 
   return <div className={isWeb ? 'app-shell web-app' : 'app-shell'}>
     <header className="app-header">
+      {appliedTheme === 'liquid-glass' && <LiquidGlassLens />}
       <div className="brand">{logo ? <img src={logo} alt="PhoneGest" className="brand-logo"/> : <span className="brand-text">PhoneGest</span>}<span className="brand-divider"/><div className="brand-product"><span>Barcode Studio</span><span className="internal-tag">{isWeb ? 'WEB' : 'INTERNO'}</span></div></div>
       <div className="header-tools">
         <span className="local-processing-badge"><span className="status-dot"/>Procesamiento local</span><span className="header-divider"/>
@@ -330,7 +340,17 @@ export default function App() {
       </section>
     </div>}
 
-    {settingsOpen && <div className="modal-overlay" onMouseDown={event=>{if(event.target===event.currentTarget){event.preventDefault();setSettingsOpen(false);}}}><section className="modal settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title"><div className="modal-heading"><div className="heading-icon blue"><Settings2 size={20}/></div><div><h2 id="settings-title">Hazlo a tu medida</h2><p>Los cambios se aplican al instante.</p></div><button className="icon-button" onClick={()=>setSettingsOpen(false)} aria-label="Cerrar configuración"><X size={20}/></button></div><div className="modal-content"><label className="form-label">Título del documento <span>Opcional</span><input data-initial-focus value={settings.documentTitle} maxLength={120} placeholder="Ej. Envío almacén · Noviembre" onChange={event=>changeSetting('documentTitle',event.target.value)}/></label><div className="form-label"><label htmlFor="settings-layout">Distribución</label><Select id="settings-layout" value={settings.layout} options={layoutOptions} onChange={value => changeSetting('layout', value)} ariaLabel="Distribución"/></div><div className="setting-row"><div><strong>Numerar los códigos</strong><p>Numeración continua en todo el documento.</p></div><input className="switch" type="checkbox" aria-label="Numerar los códigos" checked={settings.showNumbers} onChange={event=>changeSetting('showNumbers',event.target.checked)}/></div><label className="form-label inline-label">Empezar por el número<input type="number" min={1} max={999999} value={settings.startNumber} onChange={event=>changeSetting('startNumber',Math.min(999999,Math.max(1,Number(event.target.value)||1)))}/></label><div className="setting-row"><div><strong>Casillas para paquetes</strong><p>Una casilla junto a cada código.</p></div><input className="switch" type="checkbox" aria-label="Casillas para paquetes" checked={settings.showCheckboxes} onChange={event=>changeSetting('showCheckboxes',event.target.checked)}/></div><div className="setting-row"><div><strong>Mostrar identificadores</strong><p>Texto legible debajo del código de barras.</p></div><input className="switch" type="checkbox" aria-label="Mostrar identificadores" checked={settings.showText} onChange={event=>changeSetting('showText',event.target.checked)}/></div><div className="theme-setting"><span className="form-label">Apariencia</span><div className="theme-options">{(['light','dark','system'] as Theme[]).map((value)=><button key={value} className={theme===value?'selected':''} onClick={()=>setTheme(value)}>{value==='light'?<Sun size={16}/>:value==='dark'?<Moon size={16}/>:<Settings2 size={16}/>}{{light:'Claro',dark:'Oscuro',system:'Sistema'}[value]}</button>)}</div></div></div><div className="modal-footer"><span><ShieldCheck size={13}/>Se guarda en este equipo</span><button className="button button-primary" onClick={()=>setSettingsOpen(false)}><Check size={16}/>Listo</button></div></section></div>}
+    {settingsOpen && <div className="modal-overlay" onMouseDown={event=>{if(event.target===event.currentTarget){event.preventDefault();setSettingsOpen(false);}}}><section className="modal settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title"><div className="modal-heading"><div className="heading-icon blue"><Settings2 size={20}/></div><div><h2 id="settings-title">Hazlo a tu medida</h2><p>Los cambios se aplican al instante.</p></div><button className="icon-button" onClick={()=>setSettingsOpen(false)} aria-label="Cerrar configuración"><X size={20}/></button></div><div className="modal-content"><label className="form-label">Título del documento <span>Opcional</span><input data-initial-focus value={settings.documentTitle} maxLength={120} placeholder="Ej. Envío almacén · Noviembre" onChange={event=>changeSetting('documentTitle',event.target.value)}/></label><div className="form-label"><label htmlFor="settings-layout">Distribución</label><Select id="settings-layout" value={settings.layout} options={layoutOptions} onChange={value => changeSetting('layout', value)} ariaLabel="Distribución"/></div><div className="setting-row"><div><strong>Numerar los códigos</strong><p>Numeración continua en todo el documento.</p></div><input className="switch" type="checkbox" aria-label="Numerar los códigos" checked={settings.showNumbers} onChange={event=>changeSetting('showNumbers',event.target.checked)}/></div><label className="form-label inline-label">Empezar por el número<input type="number" min={1} max={999999} value={settings.startNumber} onChange={event=>changeSetting('startNumber',Math.min(999999,Math.max(1,Number(event.target.value)||1)))}/></label><div className="setting-row"><div><strong>Casillas para paquetes</strong><p>Una casilla junto a cada código.</p></div><input className="switch" type="checkbox" aria-label="Casillas para paquetes" checked={settings.showCheckboxes} onChange={event=>changeSetting('showCheckboxes',event.target.checked)}/></div><div className="setting-row"><div><strong>Mostrar identificadores</strong><p>Texto legible debajo del código de barras.</p></div><input className="switch" type="checkbox" aria-label="Mostrar identificadores" checked={settings.showText} onChange={event=>changeSetting('showText',event.target.checked)}/></div><div className="theme-setting">
+      <span className="form-label" id="theme-label">Apariencia</span>
+      <div className="theme-options" role="group" aria-labelledby="theme-label">
+        {THEME_OPTIONS.map(({ value, label, Icon }) => (
+          <button key={value} type="button" className={theme === value ? 'selected' : ''} aria-pressed={theme === value} onClick={() => setTheme(value)}>
+            <Icon size={16} aria-hidden="true" />
+            {label}
+          </button>
+        ))}
+      </div>
+    </div></div><div className="modal-footer"><span><ShieldCheck size={13}/>Se guarda en este equipo</span><button className="button button-primary" onClick={()=>setSettingsOpen(false)}><Check size={16}/>Listo</button></div></section></div>}
 
     {editing!==null && <div className="modal-overlay"><section className="modal edit-modal" role="dialog" aria-modal="true" aria-labelledby="edit-title"><div className="modal-heading"><div className="heading-icon blue"><Pencil size={19}/></div><div><h2 id="edit-title">Editar código {editing+1}</h2><p>El código de barras se actualizará al guardar.</p></div><button className="icon-button" onClick={()=>setEditing(null)} aria-label="Cerrar edición"><X size={20}/></button></div><div className="modal-content"><label className="form-label">Identificador<input data-initial-focus className="code-edit-input" value={editValue} onChange={event=>{setEditValue(event.target.value);setEditError('');}} onKeyDown={event=>{if(event.key==='Enter')saveEdit();}} spellCheck={false}/></label>{editError&&<p role="alert" className="field-error">{editError}</p>}</div><div className="modal-footer"><button className="button button-secondary" onClick={()=>setEditing(null)}>Cancelar</button><button className="button button-primary" onClick={saveEdit}><Check size={16}/>Guardar cambio</button></div></section></div>}
 

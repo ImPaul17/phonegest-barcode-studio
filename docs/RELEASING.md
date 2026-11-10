@@ -4,18 +4,18 @@ El origen del actualizador es el repositorio público [ImPaul17/phonegest-barcod
 
 ## Una versión para toda la aplicación
 
-La versión actual es **1.0.4c**. `package.json.version`, los campos propios del lockfile, el paquete instalado, `app.getVersion()`, `latest.yml` y los nombres de los ejecutables utilizan exactamente ese valor. La Release utiliza la tag **`v1.0.4c`**. No se mantiene otra versión numérica ni se crean tags de compatibilidad para publicaciones nuevas.
+La versión actual es **1.0.5**. `package.json.version`, los campos propios del lockfile, el paquete instalado, `app.getVersion()`, `latest.yml` y los nombres de los ejecutables utilizan ese valor. La Release utiliza la tag **`v1.0.5`**.
 
 Las mejoras pequeñas avanzan una letra minúscula: **1.0.4c**, **1.0.4d**, **1.0.4e**, etc. El comparador del actualizador ordena primero los tres componentes numéricos y después la revisión: **1.0.4 < 1.0.4a < 1.0.4b < 1.0.4c < 1.0.5**. Se admite una sola letra de `a` a `z`; después de `z`, incrementa la versión base.
 
-Los campos binarios fijos de los recursos de Windows solo admiten números. El empaquetado representa la revisión con un cuarto componente: **1.0.4c → 1.0.4.3**. Ese campo de Windows no sustituye la versión de la aplicación, que sigue siendo **1.0.4c**, ni introduce una versión paralela como `1.0.5`.
+Los campos binarios fijos de los recursos de Windows solo admiten números. Cuando la versión termina en letra, el empaquetado la representa con un cuarto componente, como **1.0.4.3** para **1.0.4c**. Los nombres y los metadatos de actualización conservan la letra.
 
 ## Preparar una versión
 
-Para publicar, por ejemplo, **1.0.4d**:
+Para publicar, por ejemplo, **1.0.5b**:
 
-1. Actualiza `package.json.version` a `1.0.4d` y los dos campos de versión propios de `package-lock.json`: el de la raíz y el de `packages[""]`.
-2. Pon `releaseInfo.releaseName: 1.0.4d` en `electron-builder.yml`.
+1. Actualiza `package.json.version` a `1.0.5b` y los dos campos de versión propios de `package-lock.json`: el de la raíz y el de `packages[""]`.
+2. Pon `releaseInfo.releaseName: 1.0.5b` en `electron-builder.yml`.
 3. Actualiza los nombres de descarga y la versión actual en `README.md`.
 4. Regenera los avisos y ejecuta las comprobaciones.
 
@@ -37,8 +37,8 @@ No uses `npm version patch`: incrementaría la base numérica en lugar de avanza
 Revisa y confirma los cambios, súbelos a `main` y espera al resultado de **Comprobar Windows** en Actions. Después crea una tag que coincida exactamente con la versión de `package.json`:
 
 ```powershell
-git tag -a v1.0.4d -m "PhoneGest Barcode Studio 1.0.4d"
-git push origin v1.0.4d
+git tag -a v1.0.5b -m "PhoneGest Barcode Studio 1.0.5b"
+git push origin v1.0.5b
 ```
 
 La letra es parte de la versión, también para el instalador y el actualizador. No reutilices tags ni rebajes versiones. El flujo rechaza diferencias entre tag, paquete y versión visible, y no sustituye publicaciones ya terminadas.
@@ -57,18 +57,18 @@ El flujo crea un borrador de GitHub Release, sube todos los archivos y publica a
 
 | Archivo | Uso |
 | --- | --- |
-| `PhoneGest-Barcode-Studio-1.0.4c-Instalador.exe` | Instalador NSIS y archivo descargado por el actualizador. |
-| `PhoneGest-Barcode-Studio-1.0.4c-Instalador.exe.blockmap` | Mapa de bloques del instalador. |
-| `latest.yml` | Versión `1.0.4c`, `releaseName` idéntico, nombre, tamaño y SHA512 exactos del instalador. |
-| `PhoneGest-Barcode-Studio-1.0.4c-Portable.exe` | Descarga manual de la edición portable. |
+| `PhoneGest-Barcode-Studio-1.0.5-Instalador.exe` | Instalador NSIS y archivo descargado por el actualizador. |
+| `PhoneGest-Barcode-Studio-1.0.5-Instalador.exe.blockmap` | Mapa de bloques del instalador. |
+| `latest.yml` | Versión `1.0.5`, `releaseName` idéntico, nombre, tamaño y SHA512 exactos del instalador. |
+| `PhoneGest-Barcode-Studio-1.0.5-Portable.exe` | Descarga manual de la edición portable. |
 
 `scripts/release-validation.mjs` verifica versiones, hashes, tamaños, nombres y que el blockmap cubra el instalador. Registra también SHA256 de los cuatro archivos en `release/release-validation.json`. El portable no debe aparecer como archivo instalable en `latest.yml`.
 
 No subas PDF originales, proyectos `.pgbs`, sesiones, códigos de clientes ni carpetas de trabajo. El flujo solo publica los cuatro nombres previstos. Sus pruebas utilizan los ejemplos incluidos en el código.
 
-## Transición a 1.0.4c y actualizaciones
+## Actualizaciones y revisión B histórica
 
-Los clientes publicados antes de **1.0.4c**, incluida la edición mostrada como **1.0.4b** y empaquetada como **1.0.5**, solo admitían versiones numéricas. Bloquean las rutas con letras y no pueden instalar automáticamente esta transición. Es necesario descargar y ejecutar una vez el instalador **1.0.4c** desde [GitHub Releases](https://github.com/ImPaul17/phonegest-barcode-studio/releases/latest). La edición portable se sustituye descargando el nuevo portable.
+La [revisión B histórica](https://github.com/ImPaul17/phonegest-barcode-studio/releases/tag/v1.0.4b) conserva sus archivos originales. Se empaquetó con el número interno **1.0.5**, por lo que quien use la B debe descargar e instalar manualmente la nueva **1.0.5** desde [GitHub Releases](https://github.com/ImPaul17/phonegest-barcode-studio/releases/latest). La edición portable se sustituye descargando el nuevo portable.
 
 Desde **1.0.4c**, el actualizador compara directamente las versiones con letras y descarga las nuevas en segundo plano. Espera a **Reiniciar e instalar** y guarda antes la sesión. No usa versiones preliminares ni permite bajar de versión. Las releases históricas y sus archivos conservan su contenido original; no se rebautizan binarios antiguos como si fueran la nueva versión.
 

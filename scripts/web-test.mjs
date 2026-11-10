@@ -40,6 +40,16 @@ async function downloadFrom(page, button) {
   return { name: download.suggestedFilename(), bytes: await readFile(await download.path()) };
 }
 
+async function chooseAppearance(page, name, theme) {
+  await page.getByRole('button', { name: 'Configuración', exact: true }).click();
+  const settings = page.getByRole('dialog', { name: 'Hazlo a tu medida' });
+  await settings.getByRole('button', { name, exact: true }).click();
+  await settings.getByRole('button', { name, exact: true, pressed: true }).waitFor();
+  await page.locator(`html[data-theme="${theme}"]`).waitFor({ state: 'attached' });
+  await settings.getByRole('button', { name: 'Listo', exact: true }).click();
+  await settings.waitFor({ state: 'hidden' });
+}
+
 let server;
 let browser;
 try {
@@ -100,11 +110,20 @@ try {
   assert.deepEqual(await document.locator('.identifier').allTextContents(), codes.map((code, index) => `${index + 1}. ${code}`));
   assert.equal(await document.locator('.label svg').count(), codes.length);
 
+  const a4Frame = page.locator('iframe[title*="documento A4"]');
+  const a4BeforeTheme = await a4Frame.getAttribute('srcdoc');
+  await chooseAppearance(page, 'Liquid Glass', 'liquid-glass');
+  assert.equal(await a4Frame.getAttribute('srcdoc'), a4BeforeTheme, 'Liquid Glass must not change the vector A4 document');
+  assert.equal(await document.locator('section.page').evaluate(paper => getComputedStyle(paper).backgroundColor), 'rgb(255, 255, 255)');
   await input.fill(draft);
-  await page.waitForFunction(value => Object.values(localStorage).some(text => text.includes(value)), draft);
+  await page.waitForFunction(value => {
+    const saved = JSON.parse(localStorage.getItem('phonegest-barcode-studio/session') || 'null');
+    return saved?.input === value && saved.theme === 'liquid-glass';
+  }, draft);
   await page.reload();
   await summary.waitFor();
   assert.equal(await input.inputValue(), draft, 'The browser restores the draft and generated codes');
+  await page.locator('html[data-theme="liquid-glass"]').waitFor({ state: 'attached' });
 
   const project = await downloadFrom(page, page.getByRole('button', { name: 'Guardar proyecto', exact: true }));
   assert.match(project.name, /\.pgbs$/i);
@@ -144,10 +163,11 @@ try {
   const single = await downloadFrom(page, exportImages);
   assert.match(single.name, /\.png$/i);
   await checkPng(single, codes[0]);
+  await chooseAppearance(page, 'Claro', 'light');
 
   assert.deepEqual(unexpectedRequests, [], 'The application only reads its own assets and never transmits entered codes');
   assert.deepEqual(errors, [], 'The browser reports no page or resource errors');
-  console.log(JSON.stringify({ success: true, url, version: packageInfo.version, pngs: files.map(file => file.name), checks: ['browser edition and Windows downloads link', 'A4 Code 128 preview', 'local draft and session restore', 'project download and import', 'single PNG and ZIP downloads independently decoded at 300 dpi', 'A4 document sent to the browser print dialog', 'no cross-origin requests or browser errors'] }, null, 2));
+  console.log(JSON.stringify({ success: true, url, version: packageInfo.version, pngs: files.map(file => file.name), checks: ['browser edition and Windows downloads link', 'A4 Code 128 preview', 'Liquid Glass preserves white A4 preview and restores after reload', 'local draft and session restore', 'project download and import', 'single PNG and ZIP downloads independently decoded at 300 dpi', 'A4 document sent to the browser print dialog', 'no cross-origin requests or browser errors'] }, null, 2));
 } finally {
   await browser?.close();
   await server?.close();

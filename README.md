@@ -60,7 +60,7 @@
 | **Componer el A4** | Revisar los códigos antes de imprimir y elegir entre **PhoneGest (4)**, **Compacto (7)** y **Amplio (2)** por página. Configurar título, numeración y casillas. |
 | **Exportar** | Imprimir, generar PDF y crear un **PNG a 300 ppp** por etiqueta. |
 | **Continuar después** | Recuperar la sesión local y guardar proyectos **`.pgbs`** compatibles entre web y Windows. |
-| **Trabajar a tu gusto** | Elegir tema claro, oscuro o del sistema. El papel de la vista previa se mantiene blanco. |
+| **Elegir la apariencia** | Cambiar entre Claro, Oscuro, Sistema y **Liquid Glass** en **Configuración → Apariencia**. La elección se guarda en la sesión y el documento conserva su fondo blanco. |
 
 <details>
 <summary><strong>Formato de los códigos y límites</strong></summary>
@@ -92,7 +92,7 @@ Para Windows 10/11 x64, elige un archivo de [GitHub Releases](https://github.com
 
 Ambas ediciones guardan PDF y PNG desde la aplicación.
 
-**Si vienes de una edición anterior a 1.0.4c**, ejecuta una vez el [instalador de la revisión C](https://github.com/ImPaul17/phonegest-barcode-studio/releases/tag/v1.0.4c). A partir de la C, la edición instalada puede recibir las siguientes revisiones con letras. Los ejecutables actuales no tienen firma digital, por lo que Windows puede mostrar un aviso de editor desconocido.
+**Si tienes la [revisión B histórica](https://github.com/ImPaul17/phonegest-barcode-studio/releases/tag/v1.0.4b)**, instala manualmente la nueva versión. El ejecutable de la B usaba el número interno `1.0.5` y no distingue esta publicación. Las revisiones con letras se reconocen desde la C. Los ejecutables actuales no tienen firma digital, por lo que Windows puede mostrar un aviso de editor desconocido.
 
 </details>
 
@@ -147,6 +147,7 @@ Ambas ediciones comparten la interfaz y el motor de etiquetas Code 128.
 | Área | Tecnologías | Para qué se usan |
 | :--- | :--- | :--- |
 | **Interfaz** | React · TypeScript · Vite | Espacio de trabajo compartido entre web y Windows. |
+| **Apariencia** | [Liquid Glass React](https://github.com/rdev/liquid-glass-react) · CSS | Refracción decorativa y superficies translúcidas del tema Liquid Glass. |
 | **Etiquetas** | JsBarcode · SVG | Code 128 y documento A4 vectorial. |
 | **Edición web** | Canvas · fflate · GitHub Pages | PNG, paquetes ZIP y alojamiento estático. |
 | **Edición Windows** | Electron · Sharp · electron-builder · NSIS · electron-updater | Exportaciones, instalador, portable y actualizaciones. |
@@ -186,7 +187,7 @@ La interfaz vive en `src/`, el motor compartido en `shared/` y la integración d
 
 </details>
 
-La [edición web](.github/workflows/pages.yml) se despliega desde `main`. La [publicación de Windows](.github/workflows/release.yml) se ejecuta desde tags como `v1.0.4c`. Los pasos de empaquetado, validación y recuperación están en la [guía de publicación](docs/RELEASING.md).
+La [edición web](.github/workflows/pages.yml) se despliega desde `main`. La [publicación de Windows](.github/workflows/release.yml) se ejecuta desde tags como `v1.0.5`. Los pasos de empaquetado, validación y recuperación están en la [guía de publicación](docs/RELEASING.md).
 
 <img src="docs/media/divider.svg" alt="" width="100%">
 

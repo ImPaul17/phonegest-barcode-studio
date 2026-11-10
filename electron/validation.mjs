@@ -42,7 +42,7 @@ export function validatePayload(value, { allowEmpty = false } = {}) {
 
 export function validateSession(value) {
   const payload = validatePayload(value, { allowEmpty: true });
-  const theme = ['light', 'dark', 'system'].includes(value.theme) ? value.theme : 'light';
+  const theme = ['light', 'dark', 'system', 'liquid-glass'].includes(value.theme) ? value.theme : 'light';
   const input = typeof value.input === 'string' && value.input.length <= 256000 ? value.input : '';
   return { ...payload, theme, input };
 }
